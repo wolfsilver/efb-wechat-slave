@@ -48,7 +48,7 @@ class SlaveMessageManager:
         def wechat_msg_meta(cls, func: Callable):
             def wrap_func(self: 'SlaveMessageManager', msg: wxpy.Message, *args, **kwargs):
                 logger = logging.getLogger(__name__)
-                logger.debug("[%s] Raw message: %r", msg.id, msg.raw)
+                logger.debug("[%s] Raw message: %r", getattr(msg, "id", "[id]"), getattr(msg, "id", "[raw]"))
 
                 efb_msg: EFBMsg = func(self, msg, *args, **kwargs)
 
