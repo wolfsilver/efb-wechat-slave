@@ -65,7 +65,7 @@ class ChatManager:
 
     def wxpy_chat_to_efb_chat(self, chat: wxpy.Chat, recursive=True) -> Optional[EFBChat]:
         self.logger.debug("Converting WXPY chat %r, %sin recursive mode", chat, '' if recursive else 'not ')
-        self.logger.debug("WXPY chat with ID: %s, name: %s, alias: %s;", chat.puid, chat.nick_name, chat.alias)
+        self.logger.debug("WXPY chat with ID: %s, name: %s, alias: %s;", getattr(chat, 'puid', '[puid]'), getattr(chat, 'nick_name', '[nick_name]'), getattr(chat, 'alias', '[alias]'))
         if chat is None:
             return self.MISSING_USER
         efb_chat = EFBChat(self.channel)

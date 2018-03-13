@@ -57,7 +57,7 @@ class SlaveMessageManager:
 
                 efb_msg.uid = getattr(msg, "id", constants.INVALID_MESSAGE_ID + str(uuid.uuid4()))
 
-                chat: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(msg.chat)
+                chat: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(getattr(msg, 'chat', None))
 
                 author: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(msg.author)
 
