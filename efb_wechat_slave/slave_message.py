@@ -59,7 +59,7 @@ class SlaveMessageManager:
 
                 chat: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(getattr(msg, 'chat', None))
 
-                author: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(msg.author)
+                author: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(getattr(msg, 'author', None))
 
                 # Do not override what's defined in the sub-functions
                 efb_msg.chat = efb_msg.chat or chat
@@ -176,8 +176,8 @@ class SlaveMessageManager:
         if self.channel.flag("first_link_only"):
             links = links[:1]
         for i in links:
-            msg = self.wechat_raw_link_msg(msg, i.title, i.summary, i.cover, i.url)
-        return msg
+            imsg = self.wechat_raw_link_msg(msg, i.title, i.summary, i.cover, i.url)
+        return imsg
 
     @Decorators.wechat_msg_meta
     def wechat_unsupported_msg(self, msg: wxpy.Message) -> EFBMsg:
