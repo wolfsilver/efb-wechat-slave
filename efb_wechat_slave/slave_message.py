@@ -166,6 +166,11 @@ class SlaveMessageManager:
                         des = xml.get('msg', {}).get('appmsg', {}).get('des', "")
                         url = xml.get('msg', {}).get('appmsg', {}).get('url', "")
                         return self.wechat_shared_link_msg(msg, source, title, des, url)
+                    elif type == '33':    # wxapp
+                        title = xml.get('msg', {}).get('appmsg', {}).get('sourcedisplayname', "")
+                        des = xml.get('msg', {}).get('appmsg', {}).get('title', "")
+                        url = xml.get('msg', {}).get('appmsg', {}).get('url', "")
+                        return self.wechat_shared_link_msg(msg, source, title, des, url)
                     else:
                         # Unidentified message type
                         self.logger.error("[%s] Identified unsupported sharing message type. Raw message: %s",
