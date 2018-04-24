@@ -166,8 +166,8 @@ class SlaveMessageManager:
                         des = xml.get('msg', {}).get('appmsg', {}).get('des', "")
                         url = xml.get('msg', {}).get('appmsg', {}).get('url', "")
                         return self.wechat_shared_link_msg(msg, source, title, des, url)
-                    elif type == '33':    # wxapp
-                        title = xml.get('msg', {}).get('appmsg', {}).get('sourcedisplayname', "")
+                    elif type in ('33', '36'):  # wxapp
+                        title = '小程序：' + xml.get('msg', {}).get('appmsg', {}).get('sourcedisplayname', xml.get('msg', {}).get('appmsg', {}).get('title', ""))
                         des = xml.get('msg', {}).get('appmsg', {}).get('title', "")
                         url = xml.get('msg', {}).get('appmsg', {}).get('url', "")
                         return self.wechat_shared_link_msg(msg, source, title, des, url)
