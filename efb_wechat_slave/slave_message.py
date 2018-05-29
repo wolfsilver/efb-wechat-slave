@@ -143,7 +143,7 @@ class SlaveMessageManager:
         efb_msg.text = msg.text.split('\n')[0][:-1]
         # loc = re.search("=-?([0-9.]+),-?([0-9.]+)", msg.url).groups()
         # efb_msg.attributes = EFBMsgLocationAttribute(longitude=float(loc[1]), latitude=float(loc[0]))
-        efb_msg.attributes = EFBMsgLocationAttribute(longitude=msg.location['x'], latitude=msg.location['y'])
+        efb_msg.attributes = EFBMsgLocationAttribute(latitude=float(msg.location['x']), longitude=float(msg.location['y']))
         efb_msg.type = MsgType.Location
         return efb_msg
 
