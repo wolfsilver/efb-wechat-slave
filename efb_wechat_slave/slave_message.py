@@ -166,8 +166,9 @@ class SlaveMessageManager:
                         des = xml.get('msg', {}).get('appmsg', {}).get('des', "")
                         url = xml.get('msg', {}).get('appmsg', {}).get('url', "")
                         return self.wechat_shared_link_msg(msg, source, title, des, url)
-                    elif type in ('33', '36'):  # wxapp
-                        title = '小程序：' + xml.get('msg', {}).get('appmsg', {}).get('sourcedisplayname', xml.get('msg', {}).get('appmsg', {}).get('title', ""))
+                    elif type in ('33', '36'):  # Mini programs (wxapp)
+                        title = '小程序：' + xml.get('msg', {}).get('appmsg', {}).get('sourcedisplayname', None) or \
+                                xml.get('msg', {}).get('appmsg', {}).get('title', "")
                         des = xml.get('msg', {}).get('appmsg', {}).get('title', "")
                         url = xml.get('msg', {}).get('appmsg', {}).get('url', "")
                         return self.wechat_shared_link_msg(msg, source, title, des, url)
@@ -275,8 +276,12 @@ class SlaveMessageManager:
             efb_msg.path, efb_msg.mime, efb_msg.file = self.save_file(msg)
             efb_msg.text = ""
         except EOFError:
+            if efb_msg.type == MsgType.Image:
+                efb_msg.text += self._("[Failed to download the picture, please check your phone.]")
+            else:
+                efb_msg.text += self._("[Failed to download the sticker, please check your phone.]")
             efb_msg.type = MsgType.Unsupported
-            efb_msg.text += self._("[Failed to get the picture, please check your phone.]")
+
         return efb_msg
 
     @Decorators.wechat_msg_meta
@@ -289,7 +294,7 @@ class SlaveMessageManager:
             efb_msg.filename = msg.file_name or ""
         except EOFError:
             efb_msg.type = MsgType.Text
-            efb_msg.text += self._("[Failed to get the file, please check your phone.]")
+            efb_msg.text += self._("[Failed to download the file, please check your phone.]")
         return efb_msg
 
     @Decorators.wechat_msg_meta
@@ -301,7 +306,7 @@ class SlaveMessageManager:
             efb_msg.text = ""
         except EOFError:
             efb_msg.type = MsgType.Text
-            efb_msg.text += self._("[Failed to get the voice, please check your phone.]")
+            efb_msg.text += self._("[Failed to download the voice message, please check your phone.]")
         return efb_msg
 
     @Decorators.wechat_msg_meta
@@ -313,7 +318,7 @@ class SlaveMessageManager:
             efb_msg.text = ""
         except EOFError:
             efb_msg.type = MsgType.Text
-            efb_msg.text += self._("[Failed to get the video, please check your phone.]")
+            efb_msg.text += self._("[Failed to download the video message, please check your phone.]")
         return efb_msg
 
     @Decorators.wechat_msg_meta
