@@ -257,6 +257,9 @@ class WeChatChannel(EFBChannel):
             coordinator.send_message(msg)
 
     def exit_callback(self):
+        # Don't send prompt if there's nowhere to send.
+        if not coordinator.master:
+            return
         self.logger.debug('Calling exit callback...')
         if self._stop_polling_event.is_set():
             return
@@ -273,11 +276,9 @@ class WeChatChannel(EFBChannel):
         on_log_out = on_log_out if on_log_out in ("command", "idle", "reauth") else "command"
         if on_log_out == "command":
             msg.type = MsgType.Text
-            msg.commands = EFBMsgCommands([EFBMsgCommand(
-                name=self._("Log in again"),
-                callable_name="reauth",
-                kwargs={"command": True}
-            )])
+            self.commands = EFBMsgCommands(
+                [EFBMsgCommand(name=self._("Log in again"), callable_name="reauth", kwargs={"command": True})])
+            msg.commands = self.commands
         elif on_log_out == "reauth":
             if self.flag("qr_reload") == "console_qr_code":
                 msg.text += "\n" + self._("Please check your log to continue.")
