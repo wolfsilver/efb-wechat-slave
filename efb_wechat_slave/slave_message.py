@@ -147,7 +147,8 @@ class SlaveMessageManager:
         efb_msg.type = MsgType.Location
         return efb_msg
 
-    def wechat_sharing_msg(self, msg: wxpy.Message) -> EFBMsg:
+    def wechat_sharing_msg(self, msg: wxpy.Message):
+        # This method is not wrapped by wechat_msg_meta decorator, thus no need to return EFBMsg object.
         self.logger.debug("[%s] Raw message: %s", msg.id, msg.raw)
         links = msg.articles
         if links is None:
@@ -183,9 +184,9 @@ class SlaveMessageManager:
                     return self.wechat_unsupported_msg(msg)
         if self.channel.flag("first_link_only"):
             links = links[:1]
+
         for i in links:
-            imsg = self.wechat_raw_link_msg(msg, i.title, i.summary, i.cover, i.url)
-        return imsg
+            self.wechat_raw_link_msg(msg, i.title, i.summary, i.cover, i.url)
 
     @Decorators.wechat_msg_meta
     def wechat_unsupported_msg(self, msg: wxpy.Message) -> EFBMsg:
