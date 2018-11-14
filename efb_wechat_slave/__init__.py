@@ -48,7 +48,7 @@ class WeChatChannel(EFBChannel):
 
     __version__ = version.__version__
 
-    supported_message_types = {MsgType.Text, MsgType.Sticker, MsgType.Image,
+    supported_message_types = {MsgType.Text, MsgType.Sticker, MsgType.Animation, MsgType.Image,
                                MsgType.File, MsgType.Video, MsgType.Link, MsgType.Audio}
     logger: logging.Logger = logging.getLogger("plugins.%s.WeChatChannel" % channel_id)
     qr_uuid: Tuple[str, int] = None
@@ -159,7 +159,7 @@ class WeChatChannel(EFBChannel):
     def __init__(self, instance_id: str = None):
         """
         Initialize the channel
-        
+
         Args:
             coordinator (:obj:`ehforwarderbot.coordinator.EFBCoordinator`):
                 The EFB framework coordinator
