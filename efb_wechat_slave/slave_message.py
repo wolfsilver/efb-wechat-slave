@@ -48,7 +48,7 @@ class SlaveMessageManager:
         def wechat_msg_meta(cls, func: Callable):
             def wrap_func(self: 'SlaveMessageManager', msg: wxpy.Message, *args, **kwargs):
                 logger = logging.getLogger(__name__)
-                logger.debug("[%s] Raw message: %r", getattr(msg, "id", "[id]"), getattr(msg, "id", "[raw]"))
+                logger.debug("[%s] Raw message: %r", msg.id, msg.raw)
 
                 efb_msg: EFBMsg = func(self, msg, *args, **kwargs)
 
@@ -57,9 +57,9 @@ class SlaveMessageManager:
 
                 efb_msg.uid = getattr(msg, "id", constants.INVALID_MESSAGE_ID + str(uuid.uuid4()))
 
-                chat: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(getattr(msg, 'chat', None))
+                chat: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(msg.chat)
 
-                author: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(getattr(msg, 'author', None))
+                author: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(msg.author)
 
                 # Do not override what's defined in the sub-functions
                 efb_msg.chat = efb_msg.chat or chat
@@ -106,7 +106,7 @@ class SlaveMessageManager:
         efb_msg.type = MsgType.Text
         if msg.is_at:
             found = False
-            for i in re.finditer("@([^@]*)(?=\u2005)", msg.text):
+            for i in re.finditer("@([^@]*)(?=\u2005|$)", msg.text):
                 if i.groups()[0] in (self.bot.self.name, msg.chat.self.display_name):
                     found = True
                     efb_msg.substitutions = EFBMsgSubstitutions({
@@ -141,8 +141,6 @@ class SlaveMessageManager:
     def wechat_location_msg(self, msg: wxpy.Message) -> EFBMsg:
         efb_msg = EFBMsg()
         efb_msg.text = msg.text.split('\n')[0][:-1]
-        # loc = re.search("=-?([0-9.]+),-?([0-9.]+)", msg.url).groups()
-        # efb_msg.attributes = EFBMsgLocationAttribute(longitude=float(loc[1]), latitude=float(loc[0]))
         efb_msg.attributes = EFBMsgLocationAttribute(latitude=float(msg.location['x']), longitude=float(msg.location['y']))
         efb_msg.type = MsgType.Location
         return efb_msg
