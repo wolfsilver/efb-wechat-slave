@@ -347,7 +347,7 @@ class WeChatChannel(EFBChannel):
                 else:
                     tgt_text = ""
                 if isinstance(chat, wxpy.Group) and not msg.target.author.is_self:
-                    tgt_alias = "@%s\u2005 " % msg.target.author.chat_alias
+                    tgt_alias = "@%s\u2005 " % msg.target.author.display_name
                 else:
                     tgt_alias = ""
                 msg.text = "%s%s\n\n%s" % (tgt_alias, tgt_text, msg.text)
@@ -423,7 +423,7 @@ class WeChatChannel(EFBChannel):
             f.seek(0)
             return f
         except TypeError:
-            if hasattr(f, 'close', None):
+            if hasattr(f, 'close'):
                 f.close()
             raise EFBOperationNotSupported()
 
@@ -520,7 +520,10 @@ class WeChatChannel(EFBChannel):
             self.bot: wxpy.Bot = wxpy.Bot(cache_path=os.path.join(efb_utils.get_data_path(self.channel_id), "wxpy.pkl"),
                                           qr_callback=qr_callback,
                                           logout_callback=self.exit_callback)
-            self.bot.enable_puid(os.path.join(efb_utils.get_data_path(self.channel_id), "wxpy_puid.pkl"))
+            self.bot.enable_puid(
+                os.path.join(efb_utils.get_data_path(self.channel_id), "wxpy_puid.pkl"),
+                self.flag('puid_logs')
+            )
             self.done_reauth.set()
             if hasattr(self, "slave_message"):
                 self.slave_message.bot = self.bot
