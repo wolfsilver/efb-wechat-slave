@@ -113,7 +113,7 @@ class SlaveMessageManager:
                         i.span(): EFBChat(self.channel).self()
                     })
             if not found:
-                for i in re.finditer("@([^@]*)(?=$)", msg.text):
+                for i in re.finditer("@([^@]*)(?=$|\\s)", msg.text):
                     if i.groups()[0] in (self.bot.self.name, msg.chat.self.display_name):
                         found = True
                         efb_msg.substitutions = EFBMsgSubstitutions({
