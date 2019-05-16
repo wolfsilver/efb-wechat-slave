@@ -103,7 +103,7 @@ class Bot(object):
         self.registered = Registered(self)
 
         self.puid_map = None
-        self.auto_mark_as_read = False
+        self.auto_mark_as_read = True
 
         self.is_listening = False
         self.listening_thread = None
