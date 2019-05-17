@@ -392,19 +392,19 @@ class WeChatChannel(EFBChannel):
                         if os.fstat(f.fileno()).st_size > self.MAX_FILE_SIZE:
                             raise EFBMessageError(self._("Image size is too large. (IS02)"))
                         r: wxpy.SentMessage = self._bot_send_image(chat, f.name, f)
-            if msg.text:
+            if msg.text and not msg.is_forward:
                 self._bot_send_msg(chat, msg.text)
         elif msg.type in (MsgType.File, MsgType.Audio):
             self.logger.info("[%s] Sending %s to WeChat\nFileName: %s\nPath: %s\nFilename: %s",
                              msg.uid, msg.type, msg.text, msg.path, msg.filename)
             r = self._bot_send_file(chat, msg.filename, file=msg.file)
-            if msg.text:
+            if msg.text and not msg.is_forward:
                 self._bot_send_msg(chat, msg.text)
             msg.file.close()
         elif msg.type == MsgType.Video:
             self.logger.info("[%s] Sending video to WeChat\nFileName: %s\nPath: %s", msg.uid, msg.text, msg.path)
             r = self._bot_send_video(chat, msg.path, file=msg.file)
-            if msg.text:
+            if msg.text and not msg.is_forward:
                 self._bot_send_msg(chat, msg.text)
             msg.file.close()
         else:
