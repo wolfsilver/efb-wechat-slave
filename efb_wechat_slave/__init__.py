@@ -355,10 +355,14 @@ class WeChatChannel(EFBChannel):
         elif msg.type in (MsgType.Image, MsgType.Sticker):
             self.logger.info("[%s] Image/Sticker %s", msg.uid, msg.type)
             if msg.type != MsgType.Sticker:
-                if os.fstat(msg.file.fileno()).st_size > self.MAX_FILE_SIZE:
+                if msg.mime == 'video/mp4':
+                    self.logger.debug("[%s] Sending %s (image) to WeChat.", msg.uid, msg.path)
+                    r: wxpy.SentMessage = self._bot_send_video(chat, msg.path, msg.file)
+                elif os.fstat(msg.file.fileno()).st_size > self.MAX_FILE_SIZE:
                     raise EFBMessageError(self._("Image size is too large. (IS01)"))
-                self.logger.debug("[%s] Sending %s (image) to WeChat.", msg.uid, msg.path)
-                r: wxpy.SentMessage = self._bot_send_image(chat, msg.path, msg.file)
+                else:
+                    self.logger.debug("[%s] Sending %s (image) to WeChat.", msg.uid, msg.path)
+                    r: wxpy.SentMessage = self._bot_send_image(chat, msg.path, msg.file)
                 msg.file.close()
             else:  # Convert Image format
                 if msg.mime == 'image/png':
