@@ -361,37 +361,23 @@ class WeChatChannel(EFBChannel):
                 r: wxpy.SentMessage = self._bot_send_image(chat, msg.path, msg.file)
                 msg.file.close()
             else:  # Convert Image format
-                if msg.mime == 'image/png':
-                    with NamedTemporaryFile(suffix=".jpg") as f:
-                        img = Image.open(msg.file)
-                        bg = Image.new("RGB", img.size, (255, 255, 255))
-                        bg.paste(img, img)
-                        bg.save(f)
-                        msg.path = f.name
-                        self.logger.debug('[%s] Image converted from %s to jpg', msg.uid, msg.mime)
-                        msg.file.close()
-                        f.seek(0)
-                        if os.fstat(f.fileno()).st_size > self.MAX_FILE_SIZE:
-                            raise EFBMessageError(self._("Image size is too large. (IS02)"))
-                        r: wxpy.SentMessage = self._bot_send_image(chat, f.name, f)
-                else:
-                    with NamedTemporaryFile(suffix=".gif") as f:
-                        img = Image.open(msg.file)
-                        try:
-                            alpha = img.split()[3]
-                            mask = Image.eval(alpha, lambda a: 255 if a <= 128 else 0)
-                        except IndexError:
-                            mask = Image.eval(img.split()[0], lambda a: 0)
-                        img = img.convert('RGB').convert('P', palette=Image.ADAPTIVE, colors=255)
-                        img.paste(255, mask)
-                        img.save(f, transparency=255)
-                        msg.path = f.name
-                        self.logger.debug('[%s] Image converted from %s to GIF', msg.uid, msg.mime)
-                        msg.file.close()
-                        f.seek(0)
-                        if os.fstat(f.fileno()).st_size > self.MAX_FILE_SIZE:
-                            raise EFBMessageError(self._("Image size is too large. (IS02)"))
-                        r: wxpy.SentMessage = self._bot_send_image(chat, f.name, f)
+                with NamedTemporaryFile(suffix=".gif") as f:
+                    img = Image.open(msg.file)
+                    try:
+                        alpha = img.split()[3]
+                        mask = Image.eval(alpha, lambda a: 255 if a <= 128 else 0)
+                    except IndexError:
+                        mask = Image.eval(img.split()[0], lambda a: 0)
+                    img = img.convert('RGB').convert('P', palette=Image.ADAPTIVE, colors=255)
+                    img.paste(255, mask)
+                    img.save(f, transparency=255)
+                    msg.path = f.name
+                    self.logger.debug('[%s] Image converted from %s to GIF', msg.uid, msg.mime)
+                    msg.file.close()
+                    f.seek(0)
+                    if os.fstat(f.fileno()).st_size > self.MAX_FILE_SIZE:
+                        raise EFBMessageError(self._("Image size is too large. (IS02)"))
+                    r: wxpy.SentMessage = self._bot_send_image(chat, f.name, f)
             if msg.text and not msg.is_forward:
                 self._bot_send_msg(chat, msg.text)
         elif msg.type in (MsgType.File, MsgType.Audio):
