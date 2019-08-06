@@ -40,7 +40,7 @@ Alpha 版本
 或类似的提示。大部分用户会在封禁后三个月内解封，不同用户的解封耗时不同。
 该封禁不影响其他客户端的登录。目前封禁的原因尚不明确。
 
-如果你对网页版登录有要求的话，请慎用此 Channel。详细的相关信息请参见
+如果你对网页版登录有要求的话，请慎用此信道。详细的相关信息请参见
 项目 Wiki。
 
 软件依赖
@@ -195,6 +195,12 @@ EWS 支持使用可选的配置文件来启用实验功能。配置文件存储�
    输出 PUID 相关日志到指定日志路径。请使用绝对路径。PUID 日志可能会根据会话数量和消息吞吐量
    而占用大量存储空间。
 
+- ``send_stickers_and_gif_as_jpeg`` *(bool)* [默认值: ``true``]
+
+  以 JPEG 图片方式发送自定义表情和 GIF，用于临时绕过微信网页版的自定义表情限制。详见 `#48`_\ 。
+
+.. _#48: https://github.com/blueset/efb-wechat-slave/issues/48
+
 ``vendor_specific``
 -------------------
 
@@ -204,9 +210,31 @@ EWS 的 ``EFBChat`` 提供了以下的 ``vendor_specific`` 项目：
    该会话是否为公众号。
 -  ``wxpy_objet`` *(wxpy.Chat)*
    该会话所对应的 ``wxpy.Chat`` 对象。
+- ``is_contact`` *(bool)*
+  不明。提取自 API。
+- ``is_blacklist_contact`` *(bool)*
+  该用户是否被加入黑名单。
+- ``is_conversation_contact`` *(bool)*
+  不明。提取自 API。
+- ``is_room_contact_del`` *(bool)*
+  不明。提取自 API。
+- ``is_room_owner`` *(bool)*
+  该用户是否为群组创建者。
+- ``is_brand_contact`` *(bool)*
+  不明。提取自 API。
+- ``is_sp_contact`` *(bool)*
+  不明。提取自 API。
+- ``is_shield_user`` *(bool)*
+  不明。提取自 API。
+- ``is_muted`` *(bool)*
+  该会话是否在微信中开启免打扰。
+- ``is_top`` *(bool)*
+  该会话是否在微信中被置顶。
+- ``has_photo_album`` *(bool)*
+  不明。提取自 API。
 
 本地化翻译实验
-------------
+--------------
 
 EWS 启用了实验性的本地化翻译。您可以将语言环境变量 (``LANGUAGE``,
 ``LC_ALL``, ``LC_MESSAGES`` 或 ``LANG``) 设为一种\ `已支持的语言`_\ 。
