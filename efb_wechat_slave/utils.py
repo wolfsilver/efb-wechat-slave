@@ -96,7 +96,9 @@ WC_EMOTICON_CONVERSION = {
     '[红包]': '💰', '[Packet]': '💰',
     '[鸡]': '🐥', '[Chick]': '🐥',
     '[蜡烛]': '🕯️', '[Candle]': '🕯️',
-    '[Thumbs Up]': '👍', '[Pleased]': '😊'
+    '[Thumbs Up]': '👍', '[Pleased]': '😊',
+    '[Rich]': '🀅',
+    '[Pup]': '🐶',
 }
 
 
@@ -110,7 +112,8 @@ class ExperimentalFlagsManager:
         'imgcat_qr': False,
         'delete_on_edit': False,
         'app_shared_link_mode': 'ignore',
-        'puid_logs': None
+        'puid_logs': None,
+        'send_stickers_and_gif_as_jpeg': False
     }
 
     def __init__(self, channel: 'WeChatChannel'):
@@ -149,6 +152,14 @@ def generate_message_uid(message: wxpy.SentMessage) -> str:
 
 
 def message_to_dummy_message(message_uid: str, channel: 'WeChatChannel') -> wxpy.SentMessage:
+    """
+    Generate a wxpy.SentMessage object with minimum identifying information.
+    This is generally used to recall messages using WXPY's API without the message object
+
+    Args:
+        message_uid: puid, id, local_id joined by space
+        channel: the slave channel object that issued this message
+    """
     puid, m_id, l_id = message_uid.split(' ', 2)
     d = {
         'receiver': channel.chats.get_wxpy_chat_by_uid(puid),

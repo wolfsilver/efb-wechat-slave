@@ -5,12 +5,13 @@ import tempfile
 import uuid
 import threading
 import re
-from typing import TYPE_CHECKING, Callable, Optional, Tuple, IO
+from typing import TYPE_CHECKING, Callable, Optional, Tuple, IO, Dict
 
 import magic
 import itchat
 import requests
 import xmltodict
+from PIL import Image
 
 from ehforwarderbot import EFBMsg, MsgType, EFBChat, coordinator
 from ehforwarderbot.status import EFBMessageRemoval
@@ -37,6 +38,7 @@ class SlaveMessageManager:
 
     def __init__(self, channel: 'WeChatChannel'):
         self.channel: 'WeChatChannel' = channel
+        # noinspection PyProtectedMember
         self._ = self.channel._
         self.bot: wxpy.Bot = channel.bot
         self.logger: logging.Logger = logging.getLogger(__name__)
@@ -50,7 +52,7 @@ class SlaveMessageManager:
                 logger = logging.getLogger(__name__)
                 logger.debug("[%s] Raw message: %r", msg.id, msg.raw)
 
-                efb_msg: EFBMsg = func(self, msg, *args, **kwargs)
+                efb_msg: Optional[EFBMsg] = func(self, msg, *args, **kwargs)
 
                 if efb_msg is None:
                     return
@@ -90,6 +92,7 @@ class SlaveMessageManager:
         self.bot.register(except_self=False, msg_types=consts.CARD)(self.wechat_card_msg)
         self.bot.register(except_self=False, msg_types=consts.FRIENDS)(self.wechat_friend_msg)
         self.bot.register(except_self=False, msg_types=consts.NOTE)(self.wechat_system_msg)
+        self.bot.register(except_self=False, msg_types=consts.UNSUPPORTED)(self.wechat_system_unsupported_msg)
 
         @self.bot.register(msg_types=consts.SYSTEM)
         def wc_msg_system_log(msg):
@@ -118,6 +121,17 @@ class SlaveMessageManager:
                     (len(msg.text) + 1, len(msg.text) + 1 + len(append)): EFBChat(self.channel).self()
                 })
                 efb_msg.text += " " + append
+        return efb_msg
+
+    @Decorators.wechat_msg_meta
+    def wechat_system_unsupported_msg(self, msg: wxpy.Message) -> Optional[EFBMsg]:
+        if msg.raw['MsgType'] in (50, 52, 53):
+            text = self._("[Incoming audio/video call, please check your phone.]")
+        else:
+            return None
+        efb_msg = EFBMsg()
+        efb_msg.text = text
+        efb_msg.type = MsgType.Unsupported
         return efb_msg
 
     @Decorators.wechat_msg_meta
@@ -221,13 +235,14 @@ class SlaveMessageManager:
             if share_mode == "upload":
                 try:
                     _, _, file = self.save_file(msg, app_message="thumbnail")
-                    r = requests.post("https://sm.ms/api/upload",
+                    r = requests.post("https://sm.ms/api/v2/upload",
                                       files={"smfile": file},
-                                      data={"ssl": True, "format": "json"}).json()
+                                      headers={"Authorization": "14ac5499cfdd2bb2859e4476d2e5b1d2bad079bf"},
+                                      data={"format": "json"}).json()
                     if r.get('code', '') == 'success':
                         image = r['data']['url']
-                        self.logger.log(99, "Delete link for Message \"%s\" [%s] is %s.",
-                                        msg.id, title, r['data']['delete'])
+                        self.logger.info("Delete link for picture of message \"%s\" [%s] is %s.",
+                                         msg.id, title, r['data']['delete'])
                     else:
                         self.logger.error("Failed to upload app link message as thumbnail to sm.ms: %s", r)
                 except EOFError as e:
@@ -278,6 +293,9 @@ class SlaveMessageManager:
             if msg.raw['MsgType'] == 47 and not msg.raw['Content']:
                 raise EOFError
             efb_msg.path, efb_msg.mime, efb_msg.file = self.save_file(msg)
+            if 'gif' in efb_msg.mime and Image.open(efb_msg.path).is_aniamted:
+                efb_msg.type = MsgType.Animation
+
             efb_msg.text = ""
         except EOFError:
             if efb_msg.type == MsgType.Image:
