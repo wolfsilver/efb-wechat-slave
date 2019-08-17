@@ -11,6 +11,7 @@ import magic
 import itchat
 import requests
 import xmltodict
+from PIL import Image
 
 from ehforwarderbot import EFBMsg, MsgType, EFBChat, coordinator
 from ehforwarderbot.status import EFBMessageRemoval
@@ -37,6 +38,7 @@ class SlaveMessageManager:
 
     def __init__(self, channel: 'WeChatChannel'):
         self.channel: 'WeChatChannel' = channel
+        # noinspection PyProtectedMember
         self._ = self.channel._
         self.bot: wxpy.Bot = channel.bot
         self.logger: logging.Logger = logging.getLogger(__name__)
@@ -233,13 +235,14 @@ class SlaveMessageManager:
             if share_mode == "upload":
                 try:
                     _, _, file = self.save_file(msg, app_message="thumbnail")
-                    r = requests.post("https://sm.ms/api/upload",
+                    r = requests.post("https://sm.ms/api/v2/upload",
                                       files={"smfile": file},
-                                      data={"ssl": True, "format": "json"}).json()
+                                      headers={"Authorization": "14ac5499cfdd2bb2859e4476d2e5b1d2bad079bf"},
+                                      data={"format": "json"}).json()
                     if r.get('code', '') == 'success':
                         image = r['data']['url']
-                        self.logger.log(99, "Delete link for Message \"%s\" [%s] is %s.",
-                                        msg.id, title, r['data']['delete'])
+                        self.logger.info("Delete link for picture of message \"%s\" [%s] is %s.",
+                                         msg.id, title, r['data']['delete'])
                     else:
                         self.logger.error("Failed to upload app link message as thumbnail to sm.ms: %s", r)
                 except EOFError as e:
@@ -289,6 +292,9 @@ class SlaveMessageManager:
             if msg.raw['MsgType'] == 47 and not msg.raw['Content']:
                 raise EOFError
             efb_msg.path, efb_msg.mime, efb_msg.file = self.save_file(msg)
+            if 'gif' in efb_msg.mime and Image.open(efb_msg.path).is_aniamted:
+                efb_msg.type = MsgType.Animation
+
             efb_msg.text = ""
         except EOFError:
             if efb_msg.type == MsgType.Image:

@@ -194,15 +194,42 @@ disappear at any time. Use at your own risk.
    In case of high volume of messages and chats, PUID log may occupy a large amount
    of space.
 
+- ``send_stickers_and_gif_as_jpeg`` *(bool)* [Default: ``false``]
+
+  Send stickers and GIF images as JPEG to bypass Web WeChat custom sticker limits as a workaround.
+  See `#48`_ for details.
+
+.. _#48: https://github.com/blueset/efb-wechat-slave/issues/48
+
 ``vendor_specific``
 -------------------
 
 ``EFBChat`` from EWS provides the following ``vendor_specific`` items:
 
--  ``is_mp`` *(bool)*
-   If the chat is an "Official Account".
--  ``wxpy_objet`` *(wxpy.Chat)*
-   The corresponding ``wxpy.Chat`` object of the chat.
+- ``is_mp`` *(bool)*
+  If the chat is an "Official Account".
+- ``is_contact`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_blacklist_contact`` *(bool)*
+  If the chat is blacklisted.
+- ``is_conversation_contact`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_room_contact_del`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_room_owner`` *(bool)*
+  If the member is the creator of a group chat.
+- ``is_brand_contact`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_sp_contact`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_shield_user`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_muted`` *(bool)*
+  If the chat is muted by the user from WeChat.
+- ``is_top`` *(bool)*
+  If the chat is pinned to top by the user from WeChat.
+- ``has_photo_album`` *(bool)*
+  Unknown. Extracted from API.
 
 Experimental localization support
 ---------------------------------
