@@ -8,7 +8,10 @@ EFB WeChat Slave Channel
    :alt: Translate this project
    :target: https://crowdin.com/project/ehforwarderbot/
 
-.. figure:: https://i.imgur.com/dCZfh14.png
+.. image:: https://github.com/blueset/efb-wechat-slave/blob/master/banner.png
+   :alt: Banner
+
+.. image:: https://i.imgur.com/dCZfh14.png
    :alt: This project proudly supports #SayNoToWeChat campaign.
 
 `README in other languages`_.
@@ -21,7 +24,10 @@ EWS is an EFB Slave Channel for WeChat, based on reversed engineered
 WeChat Web API, modified ``wxpy``, and ``itchat``.
 
 Some source code in this repository was adapted from
-`youfou/wxpy <https://github.com/youfou/wxpy>`__.
+`youfou/wxpy`_ and `littlecodersh/ItChat`_.
+
+.. _youfou/wxpy: https://github.com/youfou/wxpy
+.. _littlecodersh/ItChat:  https://github.com/littlecodersh/ItChat/
 
 Alpha Version
 -------------
@@ -53,7 +59,7 @@ Dependencies
 -  libmagic
 -  pillow
 
-Install and enable
+Install and Enable
 ------------------
 
 1. Install all binary dependencies stated above
@@ -73,16 +79,15 @@ Install and enable
 Alternative installation methods
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-EWS also has other alternative installation methods
+ETM also has other alternative installation methods
 contributed by the community, including:
 
-- `AUR package`_ maintained by KeLiu_ (``python-efb-wechat-slave-git``)
+- `AUR package`_ maintained by KeLiu_ (``python-efb-telegram-master-git``)
 - Other `installation scripts and containers (e.g. Docker)`_
 
 .. _KeLiu: https://github.com/specter119
-.. _AUR package: https://aur.archlinux.org/packages/python-efb-wechat-slave-git
+.. _AUR package: https://aur.archlinux.org/packages/python-efb-telegram-master-git
 .. _installation scripts and containers (e.g. Docker): https://github.com/blueset/ehForwarderBot/wiki/Channels-Repository#scripts-and-containers-eg-docker
-
 
 Optional configuration
 ----------------------
@@ -122,7 +127,7 @@ FAQ
    -  have a stable internet connection on your server, and
    -  **keep your WeChat app always online**.
 
-Known issues
+Known Issues
 ------------
 
 - Due to the design of Web WeChat, chats with no name
@@ -133,13 +138,11 @@ Known issues
   is thus disappeared.
 - Only features supported by Web WeChat are supported by EWS,
   which means:
-
   - No "Moments"
   - No money transfers
   - Cannot send voice messages
   - Cannot send locations
   - etc.
-
 - Some multimedia files (pictures, stickers, files, etc.) might be
   blocked by Web WeChat, and no data is received, especially for
   stickers. In such cases, you will be reminded to check your phone.
@@ -195,35 +198,92 @@ disappear at any time. Use at your own risk.
 
    Turn on to edit message by recall and resend. Edit message is disabled by default.
 
--  ``app_shared_link_mode`` *(str)* [Default：``"ignore"``]
+-  ``app_shared_link_mode`` *(str)* [Default: ``"ignore"``]
 
    Behavior to deal with thumbnails when a message shared by 3rd party apps is received.
 
-   -  ``"ignore"``\ ：Ignore thumbnail
-   -  ``"upload"``\ ：Upload to public image hosting (https://sm.ms ), and output
+   -  ``"ignore"``: Ignore thumbnail
+   -  ``"upload"``: Upload to public image hosting (https://sm.ms ), and output
       its delete link to the log.
-   -  ``"image"``\ ：Send thumbnail as image (not recommended).
+   -  ``"image"``: Send thumbnail as image (not recommended).
 
--  ``puid_logs`` *(str)* [Default：``null``]
+-  ``puid_logs`` *(str)* [Default: ``null``]
 
    Output PUID related log to the path indicated. Please use absolute path.
    In case of high volume of messages and chats, PUID log may occupy a large amount
    of space.
+
+- ``send_stickers_and_gif_as_jpeg`` *(bool)* [Default: ``false``]
+
+  Send stickers and GIF images as JPEG to bypass Web WeChat custom sticker limits as a workaround.
+  See `#48`_ for details.
+
+.. _#48: https://github.com/blueset/efb-wechat-slave/issues/48
+
+- ``system_chats_to_include`` *(list of str)** [Default: ``[filehelper]``]
+
+  List of system chats to show in the default chat list. It must be zero to
+  four of the following: ``filehelper`` (File Helper), ``fmessage`` (Friend
+  suggestions), ``newsapp`` (Tencent News) and, ``weixin`` (WeChat Team).
 
 ``vendor_specific``
 -------------------
 
 ``EFBChat`` from EWS provides the following ``vendor_specific`` items:
 
--  ``is_mp`` *(bool)*
-   If the chat is an "Official Account".
--  ``wxpy_objet`` *(wxpy.Chat)*
-   The corresponding ``wxpy.Chat`` object of the chat.
+- ``is_mp`` *(bool)*
+  If the chat is an "Official Account".
+- ``is_contact`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_blacklist_contact`` *(bool)*
+  If the chat is blacklisted.
+- ``is_conversation_contact`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_room_contact_del`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_room_owner`` *(bool)*
+  If the member is the creator of a group chat.
+- ``is_brand_contact`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_sp_contact`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_shield_user`` *(bool)*
+  Unknown. Extracted from API.
+- ``is_muted`` *(bool)*
+  If the chat is muted by the user from WeChat.
+- ``is_top`` *(bool)*
+  If the chat is pinned to top by the user from WeChat.
+- ``has_photo_album`` *(bool)*
+  Unknown. Extracted from API.
 
-Experimental localization support
----------------------------------
+License
+-------
 
-EWS supports localized user interface prompts experimentally,
+EWS is licensed under `GNU Affero General Public License 3.0`_ or later versions::
+
+    EFB WeChat Slave Channel: An slave channel for EH Forwarder Bot.
+    Copyright (C) 2016 - 2019 Eana Hufwe, and the EFB WeChat Slave Channel contributors
+    All rights reserved.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+.. _GNU Affero General Public License 3.0: https://www.gnu.org/licenses/agpl-3.0.txt
+
+Translation support
+-------------------
+
+EWS supports translated user interface prompts,
 by setting the locale environmental variable (``LANGUAGE``,
 ``LC_ALL``, ``LC_MESSAGES`` or ``LANG``) to one of our
 `supported languages`_. Meanwhile, you can help to translate
@@ -231,3 +291,9 @@ this project into your languages on `our Crowdin page`_.
 
 .. _supported languages: https://crowdin.com/project/ehforwarderbot/
 .. _our Crowdin page: https://crowdin.com/project/ehforwarderbot/
+
+.. note::
+
+    If your are installing from source code, you will not get translations
+    of the user interface without manual compile of message catalogs (``.mo``)
+    prior to installation.
