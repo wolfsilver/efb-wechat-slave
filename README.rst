@@ -8,7 +8,10 @@ EFB WeChat Slave Channel：EFB 微信从端 (EWS)
    :alt: Translate this project
    :target: https://crowdin.com/project/ehforwarderbot/
 
-.. figure:: https://i.imgur.com/dCZfh14.png
+.. image:: https://github.com/blueset/efb-wechat-slave/blob/master/banner.png
+   :alt: Banner
+
+.. image:: https://i.imgur.com/dCZfh14.png
    :alt: This project proudly supports #SayNoToWeChat campaign.
 
 `README in other languages`_.
@@ -19,11 +22,14 @@ EFB WeChat Slave Channel：EFB 微信从端 (EWS)
 
 **Channel ID**: ``blueset.wechat``
 
-EWS 是兼容 EH Forwarder Bot 的微信从端，基于逆向工程的微信网页版、
-修改版 ``wxpy``\ ，\ ``itchat``\ 。
+EWS 是兼容 EH Forwarder Bot 的微信从端，基于逆向工程的微信网页版、\
+修改版 ``wxpy`` 和 ``ItChat``\ 。
 
 本项目的部分代码修改自
-`youfou/wxpy <https://github.com/youfou/wxpy>`__\ 。
+`youfou/wxpy`_\ 、\ `littlecodersh/ItChat`_\ 。
+
+.. _youfou/wxpy: https://github.com/youfou/wxpy
+.. _littlecodersh/ItChat:  https://github.com/littlecodersh/ItChat/
 
 Alpha 版本
 ----------
@@ -34,14 +40,13 @@ Alpha 版本
 使用前须知
 ----------
 
-自 2016 年中旬以来，陆续有用户报告其微信网页版登录被腾讯封禁。
-表现为用任何方式登录微信网页版提示「当前登录环境异常。为了你的账号安全，
-暂时不能登录 Web 微信。你可以通过手机客户端或 Windows 微信登录」
-或类似的提示。大部分用户会在封禁后三个月内解封，不同用户的解封耗时不同。
+自 2016 年中旬以来，陆续有用户报告其微信网页版登录被腾讯封禁。\
+表现为用任何方式登录微信网页版提示「当前登录环境异常。为了你的账号安全，\
+暂时不能登录 Web 微信。你可以通过手机客户端或 Windows 微信登录」\
+或类似的提示。大部分用户会在封禁后三个月内解封，不同用户的解封耗时不同。\
 该封禁不影响其他客户端的登录。目前封禁的原因尚不明确。
 
-如果你对网页版登录有要求的话，请慎用此信道。详细的相关信息请参见
-项目 Wiki。
+如果你对网页版登录有要求的话，请慎用此信道。详细的相关信息请参见项目 Wiki。
 
 软件依赖
 --------
@@ -122,7 +127,7 @@ EWS 支持使用可选的配置文件来启用实验功能。配置文件存储�
 已知问题
 --------
 
-- 就于微信网页版的工作原理，目前对于没有名称的会话、以及重名的会话支持较差，
+- 就于微信网页版的工作原理，目前对于没有名称的会话、以及重名的会话支持较差，\
   可能会有消息传递错误等问题。
 - 同理，部分情况下变更名称的会话会被视为全新的会话，而「旧会话」随即消失。
 - 仅支持微信网页版所支持的功能以及消息类型，即
@@ -133,7 +138,6 @@ EWS 支持使用可选的配置文件来启用实验功能。配置文件存储�
     - ……等等诸如此类
 - 部分文件、图片、表情等多媒体文件会被网页版微信截断，即收不到任何数据，
   尤以表情为甚。因此造成的偶发现象，会提醒用户使用移动客户端查看。
-
 
 实验功能
 --------
@@ -160,7 +164,7 @@ EWS 支持使用可选的配置文件来启用实验功能。配置文件存储�
 
    -  ``"console_qr_code"``:
       将二维码和提示输出到系统标准输出（\ ``stdout``\ ）。
-   -  ``"master_qr_code"``: 将二维码和提示发送到主端。 **注意**
+   -  ``"master_qr_code"``: 将二维码和提示发送到主端。 **注意**\
       登录时二维码会频繁刷新，请注意二维码可能会导致刷屏。
 
 -  ``on_log_out`` *(str)* [默认值: ``"command"``]
@@ -187,19 +191,27 @@ EWS 支持使用可选的配置文件来启用实验功能。配置文件存储�
    在收到第三方合作应用分享给微信的链接时，其附带的预览图以何种形式发送。
 
    -  ``"ignore"``\ ：忽略附带的缩略图
-   -  ``"upload"``\ ：将缩略图上传到公开图床（\ https://sm.ms\ ），并在日志中输出图片的删除链接。
+   -  ``"upload"``\ ：将缩略图上传到公开图床（\ https://sm.ms\ ），\
+      并在日志中输出图片的删除链接。
    -  ``"image"``\ ：将消息以图片形式发送（不推荐）
 
 -  ``puid_logs`` *(str)* [默认值：``null``]
 
-   输出 PUID 相关日志到指定日志路径。请使用绝对路径。PUID 日志可能会根据会话数量和消息吞吐量
-   而占用大量存储空间。
+   输出 PUID 相关日志到指定日志路径。请使用绝对路径。PUID 日志可能会根据\
+   会话数量和消息吞吐量而占用大量存储空间。
 
 - ``send_stickers_and_gif_as_jpeg`` *(bool)* [默认值: ``false``]
 
-  以 JPEG 图片方式发送自定义表情和 GIF，用于临时绕过微信网页版的自定义表情限制。详见 `#48`_\ 。
+  以 JPEG 图片方式发送自定义表情和 GIF，用于临时绕过微信网页版的自定义表情限制。\
+  详见 `#48`_\ 。
 
 .. _#48: https://github.com/blueset/efb-wechat-slave/issues/48
+
+- ``system_chats_to_include`` *(list of str)* [默认值: ``[filehelper]``]
+
+  在默认会话列表中显示的特殊系统会话。其内容仅能为 ``filehelper``\
+  （文件传输助手）、\ ``fmessage``\ （朋友推荐消息）、\ ``newsapp``\
+  （腾讯新闻）、\ ``weixin``\ （微信团队）其中零到四个选项。
 
 ``vendor_specific``
 -------------------
@@ -231,12 +243,41 @@ EWS 的 ``EFBChat`` 提供了以下的 ``vendor_specific`` 项目：
 - ``has_photo_album`` *(bool)*
   不明。提取自 API。
 
-本地化翻译实验
---------------
+开源许可
+--------
 
-EWS 启用了实验性的本地化翻译。您可以将语言环境变量 (``LANGUAGE``,
+EWS 使用了 `GNU Affero General Public License 3.0`_ 或更新版本作为其开源许可::
+
+    EFB WeChat Slave Channel: An master channel for EH Forwarder Bot.
+    Copyright (C) 2016 - 2019 Eana Hufwe, and the EFB WeChat Slave Channel contributors
+    All rights reserved.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+.. _GNU Affero General Public License 3.0: https://www.gnu.org/licenses/agpl-3.0.txt
+
+翻译界面
+--------
+
+EWS 启用了社区支持的本地化翻译。您可以将语言环境变量 (``LANGUAGE``,
 ``LC_ALL``, ``LC_MESSAGES`` 或 ``LANG``) 设为一种\ `已支持的语言`_\ 。
 同时，您也可以在我们的 `Crowdin 项目`_\ 里面将 EWS 翻译为您的语言。
 
 .. _已支持的语言: https://crowdin.com/project/ehforwarderbot/
 .. _Crowdin 项目: https://crowdin.com/project/ehforwarderbot/
+
+.. note::
+
+    如果您是从源码安装的 EWS，您需要在安装前事先编译翻译文本目录（\ ``.mo``\ ），\
+    才可启用界面翻译。
