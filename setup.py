@@ -35,16 +35,20 @@ setup(
         "Topic :: Utilities"
     ],
     install_requires=[
-        "ehforwarderbot>=2.0.0b15",
+        "ehforwarderbot>=2.0.0b18",
         "itchat>=1.3.10",
         "python-magic",
         "pillow",
         "pyqrcode",
         "xmltodict",
         "PyYaml",
-        "typing_extensions"
+        "requests>=2.22.0",
+        "typing_extensions",
+        "bullet",
+        "cjkwrap"
     ],
     entry_points={
-        'ehforwarderbot.slave': 'blueset.wechat = efb_wechat_slave:WeChatChannel'
+        'ehforwarderbot.slave': 'blueset.wechat = efb_wechat_slave:WeChatChannel',
+        'ehforwarderbot.wizard': 'blueset.wechat = efb_wechat_slave.wizard:wizard'
     }
 )

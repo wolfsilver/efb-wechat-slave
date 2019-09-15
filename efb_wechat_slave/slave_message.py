@@ -5,21 +5,21 @@ import tempfile
 import uuid
 import threading
 import re
-from typing import TYPE_CHECKING, Callable, Optional, Tuple, IO
+from typing import TYPE_CHECKING, Callable, Optional, Tuple, IO, Dict
 
 import magic
-import itchat
 import requests
 import xmltodict
+from PIL import Image
 
 from ehforwarderbot import EFBMsg, MsgType, EFBChat, coordinator
 from ehforwarderbot.status import EFBMessageRemoval
 from ehforwarderbot.message import EFBMsgLocationAttribute, EFBMsgLinkAttribute, EFBMsgCommands, EFBMsgCommand, \
     EFBMsgSubstitutions
-from . import wxpy
-from .wxpy.api import consts
 from . import constants
 from . import utils as ews_utils
+from .vendor import wxpy, itchat
+from .vendor.wxpy.api import consts
 
 if TYPE_CHECKING:
     from . import WeChatChannel
@@ -37,6 +37,7 @@ class SlaveMessageManager:
 
     def __init__(self, channel: 'WeChatChannel'):
         self.channel: 'WeChatChannel' = channel
+        # noinspection PyProtectedMember
         self._ = self.channel._
         self.bot: wxpy.Bot = channel.bot
         self.logger: logging.Logger = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ class SlaveMessageManager:
                 logger = logging.getLogger(__name__)
                 logger.debug("[%s] Raw message: %r", msg.id, msg.raw)
 
-                efb_msg: EFBMsg = func(self, msg, *args, **kwargs)
+                efb_msg: Optional[EFBMsg] = func(self, msg, *args, **kwargs)
 
                 if efb_msg is None:
                     return
@@ -83,6 +84,7 @@ class SlaveMessageManager:
         self.bot.register(except_self=False, msg_types=consts.TEXT)(self.wechat_text_msg)
         self.bot.register(except_self=False, msg_types=consts.SHARING)(self.wechat_sharing_msg)
         self.bot.register(except_self=False, msg_types=consts.PICTURE)(self.wechat_picture_msg)
+        self.bot.register(except_self=False, msg_types=consts.STICKER)(self.wechat_sticker_msg)
         self.bot.register(except_self=False, msg_types=consts.ATTACHMENT)(self.wechat_file_msg)
         self.bot.register(except_self=False, msg_types=consts.RECORDING)(self.wechat_voice_msg)
         self.bot.register(except_self=False, msg_types=consts.MAP)(self.wechat_location_msg)
@@ -90,13 +92,14 @@ class SlaveMessageManager:
         self.bot.register(except_self=False, msg_types=consts.CARD)(self.wechat_card_msg)
         self.bot.register(except_self=False, msg_types=consts.FRIENDS)(self.wechat_friend_msg)
         self.bot.register(except_self=False, msg_types=consts.NOTE)(self.wechat_system_msg)
+        self.bot.register(except_self=False, msg_types=consts.UNSUPPORTED)(self.wechat_system_unsupported_msg)
 
         @self.bot.register(msg_types=consts.SYSTEM)
         def wc_msg_system_log(msg):
             self.logger.debug("WeChat System Message:\n%s", repr(msg))
 
     @Decorators.wechat_msg_meta
-    def wechat_text_msg(self, msg: wxpy.Message) -> EFBMsg:
+    def wechat_text_msg(self, msg: wxpy.Message) -> Optional[EFBMsg]:
         if msg.chat.user_name == "newsapp" and msg.text.startswith("<mmreader>"):
             return self.wechat_newsapp_msg(msg)
         if msg.text.startswith("http://weixin.qq.com/cgi-bin/redirectforward?args="):
@@ -118,6 +121,17 @@ class SlaveMessageManager:
                     (len(msg.text) + 1, len(msg.text) + 1 + len(append)): EFBChat(self.channel).self()
                 })
                 efb_msg.text += " " + append
+        return efb_msg
+
+    @Decorators.wechat_msg_meta
+    def wechat_system_unsupported_msg(self, msg: wxpy.Message) -> Optional[EFBMsg]:
+        if msg.raw['MsgType'] in (50, 52, 53):
+            text = self._("[Incoming audio/video call, please check your phone.]")
+        else:
+            return None
+        efb_msg = EFBMsg()
+        efb_msg.text = text
+        efb_msg.type = MsgType.Unsupported
         return efb_msg
 
     @Decorators.wechat_msg_meta
@@ -221,13 +235,14 @@ class SlaveMessageManager:
             if share_mode == "upload":
                 try:
                     _, _, file = self.save_file(msg, app_message="thumbnail")
-                    r = requests.post("https://sm.ms/api/upload",
+                    r = requests.post("https://sm.ms/api/v2/upload",
                                       files={"smfile": file},
-                                      data={"ssl": True, "format": "json"}).json()
+                                      headers={"Authorization": "14ac5499cfdd2bb2859e4476d2e5b1d2bad079bf"},
+                                      data={"format": "json"}).json()
                     if r.get('code', '') == 'success':
                         image = r['data']['url']
-                        self.logger.log(99, "Delete link for Message \"%s\" [%s] is %s.",
-                                        msg.id, title, r['data']['delete'])
+                        self.logger.info("Delete link for picture of message \"%s\" [%s] is %s.",
+                                         msg.id, title, r['data']['delete'])
                     else:
                         self.logger.error("Failed to upload app link message as thumbnail to sm.ms: %s", r)
                 except EOFError as e:
@@ -259,7 +274,7 @@ class SlaveMessageManager:
                 efb_msg.text += "\n\n%s" % image
         return efb_msg
 
-    def wechat_newsapp_msg(self, msg: wxpy.Message) -> EFBMsg:
+    def wechat_newsapp_msg(self, msg: wxpy.Message) -> Optional[EFBMsg]:
         data = xmltodict.parse(msg.text)
         news = data.get('mmreader', {}).get('category', {}).get('newitem', [])
         e_msg = None
@@ -273,17 +288,39 @@ class SlaveMessageManager:
     @Decorators.wechat_msg_meta
     def wechat_picture_msg(self, msg: wxpy.Message) -> EFBMsg:
         efb_msg = EFBMsg()
-        efb_msg.type = MsgType.Image if msg.raw['MsgType'] == 3 else MsgType.Sticker
+        efb_msg.type = MsgType.Image
         try:
             if msg.raw['MsgType'] == 47 and not msg.raw['Content']:
                 raise EOFError
+            if msg.file_size == 0:
+                raise EOFError
             efb_msg.path, efb_msg.mime, efb_msg.file = self.save_file(msg)
+            efb_msg.filename = msg.file_name
+            # ^ Also throws EOFError
             efb_msg.text = ""
         except EOFError:
-            if efb_msg.type == MsgType.Image:
-                efb_msg.text += self._("[Failed to download the picture, please check your phone.]")
-            else:
-                efb_msg.text += self._("[Failed to download the sticker, please check your phone.]")
+            efb_msg.text += self._("[Failed to download the picture, please check your phone.]")
+            efb_msg.type = MsgType.Unsupported
+
+        return efb_msg
+
+    @Decorators.wechat_msg_meta
+    def wechat_sticker_msg(self, msg: wxpy.Message) -> EFBMsg:
+        efb_msg = EFBMsg()
+        efb_msg.type = MsgType.Sticker
+        try:
+            if msg.raw['MsgType'] == 47 and not msg.raw['Content']:
+                raise EOFError
+            if msg.file_size == 0:
+                raise EOFError
+            efb_msg.path, efb_msg.mime, efb_msg.file = self.save_file(msg)
+            efb_msg.filename = msg.file_name
+            # ^ Also throws EOFError
+            if 'gif' in efb_msg.mime and Image.open(efb_msg.path).is_animated:
+                efb_msg.type = MsgType.Animation
+            efb_msg.text = ""
+        except EOFError:
+            efb_msg.text += self._("[Failed to download the sticker, please check your phone.]")
             efb_msg.type = MsgType.Unsupported
 
         return efb_msg
@@ -318,7 +355,10 @@ class SlaveMessageManager:
         efb_msg = EFBMsg()
         efb_msg.type = MsgType.Video
         try:
+            if msg.file_size == 0:
+                raise EOFError
             efb_msg.path, efb_msg.mime, efb_msg.file = self.save_file(msg)
+            efb_msg.filename = msg.file_name
             efb_msg.text = ""
         except EOFError:
             efb_msg.type = MsgType.Text

@@ -7,14 +7,15 @@ import os
 import tempfile
 import threading
 import time
-from pkg_resources import resource_filename
 from gettext import translation
 from tempfile import NamedTemporaryFile
-from typing import IO, Any, Dict, Optional, List, Tuple
+from typing import IO, Any, Dict, Optional, List, Tuple, Callable
 
 import yaml
 from PIL import Image
+from pkg_resources import resource_filename
 from pyqrcode import QRCode
+from typing_extensions import Final
 
 from ehforwarderbot import EFBChannel, EFBMsg, MsgType, ChannelType, \
     ChatType, EFBStatus, EFBChat, coordinator
@@ -23,14 +24,16 @@ from ehforwarderbot.exceptions import EFBMessageTypeNotSupported, EFBMessageErro
     EFBOperationNotSupported
 from ehforwarderbot.message import EFBMsgCommands, EFBMsgCommand
 from ehforwarderbot.status import EFBMessageRemoval
+from ehforwarderbot.types import MessageID
 from ehforwarderbot.utils import extra
-from . import __version__ as version
 from . import utils as ews_utils
-from . import wxpy
-from .wxpy.utils import PuidMap
+from .__version__ import __version__
 from .chats import ChatManager
 from .slave_message import SlaveMessageManager
 from .utils import ExperimentalFlagsManager
+from .vendor import wxpy
+from .vendor.wxpy import ResponseError
+from .vendor.wxpy.utils import PuidMap
 
 
 class WeChatChannel(EFBChannel):
@@ -46,110 +49,85 @@ class WeChatChannel(EFBChannel):
     channel_id = 'blueset.wechat'
     channel_type = ChannelType.Slave
 
-    __version__ = version.__version__
+    __version__ = __version__
 
     supported_message_types = {MsgType.Text, MsgType.Sticker, MsgType.Image,
-                               MsgType.File, MsgType.Video, MsgType.Link, MsgType.Audio}
+                               MsgType.File, MsgType.Video, MsgType.Link, MsgType.Audio,
+                               MsgType.Animation}
     logger: logging.Logger = logging.getLogger("plugins.%s.WeChatChannel" % channel_id)
-    qr_uuid: Tuple[str, int] = None
+    qr_uuid: Tuple[str, int] = ('', 0)
     done_reauth: threading.Event = threading.Event()
     _stop_polling_event: threading.Event = threading.Event()
 
     config = dict()
 
-    # Gnu Gettext Translator
+    bot: wxpy.Bot
+
+    # GNU Gettext Translator
 
     translator = translation("efb_wechat_slave",
                              resource_filename('efb_wechat_slave', 'locale'),
                              fallback=True)
 
-    _ = translator.gettext
-    ngettext = translator.ngettext
+    _: Callable = translator.gettext
+    ngettext: Callable = translator.ngettext
 
-    SYSTEM_ACCOUNTS = {
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+    SYSTEM_ACCOUNTS: Final = {
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'filehelper': _('filehelper'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'newsapp': _('newsapp'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'fmessage': _('fmessage'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'weibo': _('weibo'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'qqmail': _('qqmail'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'tmessage': _('tmessage'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'qmessage': _('qmessage'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'qqsync': _('qqsync'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'floatbottle': _('floatbottle'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'lbsapp': _('lbsapp'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'shakeapp': _('shakeapp'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'medianote': _('medianote'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'qqfriend': _('qqfriend'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'readerapp': _('readerapp'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'blogapp': _('blogapp'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'facebookapp': _('facebookapp'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'masssendapp': _('masssendapp'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'meishiapp': _('meishiapp'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'feedsapp': _('feedsapp'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'voip': _('voip'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'blogappweixin': _('blogappweixin'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'weixin': _('weixin'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'brandsessionholder': _('brandsessionholder'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'weixinreminder': _('weixinreminder'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'officialaccounts': _('officialaccounts'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'notification_messages': _('notification_messages'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'wxitil': _('wxitil'),
-        # TRANSLATORS: Translate this to the corresponding display name
-        # of the WeChat system account. Guessed names are not accepted.
+        # TRANSLATORS: Translate this to the corresponding display name of the WeChat system account. Guessed names are not accepted.
         'userexperience_alarm': _('userexperience_alarm'),
     }
 
@@ -184,9 +162,9 @@ class WeChatChannel(EFBChannel):
         Configuration file is in YAML format.
         """
         config_path = efb_utils.get_config_path(self.channel_id)
-        if not os.path.exists(config_path):
+        if not config_path.exists():
             return
-        with open(config_path) as f:
+        with config_path.open() as f:
             d = yaml.load(f)
             if not d:
                 return
@@ -235,6 +213,7 @@ class WeChatChannel(EFBChannel):
         self.qr_uuid = (uuid, status)
 
         msg = EFBMsg()
+        msg.uid = f"ews_auth_{uuid}_{status}"
         msg.type = MsgType.Text
         msg.chat = EFBChat(self).system()
         msg.chat.chat_name = self._("EWS User Auth")
@@ -273,7 +252,7 @@ class WeChatChannel(EFBChannel):
         msg.chat = msg.author = chat
         msg.deliver_to = coordinator.master
         msg.text = self._("WeChat server has logged you out. Please log in again when you are ready.")
-        msg.uid = "__reauth__.%s" % int(time.time())
+        msg.uid = f"__reauth__.{int(time.time())}"
         msg.type = MsgType.Text
         on_log_out = self.flag("on_log_out")
         on_log_out = on_log_out if on_log_out in ("command", "idle", "reauth") else "command"
@@ -310,7 +289,7 @@ class WeChatChannel(EFBChannel):
             EFBMessageTypeNotSupported: Raised when message type is not supported by the channel.
         """
         chat: wxpy.Chat = self.chats.get_wxpy_chat_by_uid(msg.chat.chat_uid)
-        r = None
+        r: wxpy.SentMessage
         self.logger.info("[%s] Sending message to WeChat:\n"
                          "uid: %s\n"
                          "UserName: %s\n"
@@ -335,11 +314,13 @@ class WeChatChannel(EFBChannel):
         if msg.type in [MsgType.Text, MsgType.Link]:
             if isinstance(msg.target, EFBMsg):
                 max_length = self.flag("max_quote_length")
-                qt_txt = "%s" % msg.target.text
+                qt_txt = msg.target.text or msg.target.type.name
                 if max_length > 0:
-                    tgt_text = qt_txt[:max_length]
                     if len(qt_txt) >= max_length:
+                        tgt_text = qt_txt[:max_length]
                         tgt_text += "…"
+                    else:
+                        tgt_text = qt_txt
                     tgt_text = "「%s」" % tgt_text
                 elif max_length < 0:
                     tgt_text = "「%s」" % qt_txt
@@ -350,34 +331,70 @@ class WeChatChannel(EFBChannel):
                 else:
                     tgt_alias = ""
                 msg.text = "%s%s\n\n%s" % (tgt_alias, tgt_text, msg.text)
-            r: wxpy.SentMessage = self._bot_send_msg(chat, msg.text)
+            r = self._bot_send_msg(chat, msg.text)
             self.logger.debug('[%s] Sent as a text message. %s', msg.uid, msg.text)
-        elif msg.type in (MsgType.Image, MsgType.Sticker):
-            self.logger.info("[%s] Image/Sticker %s", msg.uid, msg.type)
-            if msg.type != MsgType.Sticker:
-                if os.fstat(msg.file.fileno()).st_size > self.MAX_FILE_SIZE:
-                    raise EFBMessageError(self._("Image size is too large. (IS01)"))
-                self.logger.debug("[%s] Sending %s (image) to WeChat.", msg.uid, msg.path)
-                r: wxpy.SentMessage = self._bot_send_image(chat, msg.path, msg.file)
-                msg.file.close()
-            else:  # Convert Image format
+        elif msg.type in (MsgType.Image, MsgType.Sticker, MsgType.Animation):
+            self.logger.info("[%s] Image/GIF/Sticker %s", msg.uid, msg.type)
+
+            convert_to = None
+            file = msg.file
+            assert file is not None
+
+            if self.flag('send_stickers_and_gif_as_jpeg'):
+                if msg.type == MsgType.Sticker or msg.mime == "image/gif":
+                    convert_to = "image/jpeg"
+            else:
+                if msg.type == MsgType.Sticker:
+                    convert_to = "image/gif"
+
+            if convert_to == "image/gif":
                 with NamedTemporaryFile(suffix=".gif") as f:
-                    img = Image.open(msg.file)
                     try:
-                        alpha = img.split()[3]
-                        mask = Image.eval(alpha, lambda a: 255 if a <= 128 else 0)
-                    except IndexError:
-                        mask = Image.eval(img.split()[0], lambda a: 0)
-                    img = img.convert('RGB').convert('P', palette=Image.ADAPTIVE, colors=255)
-                    img.paste(255, mask)
-                    img.save(f, transparency=255)
-                    msg.path = f.name
-                    self.logger.debug('[%s] Image converted from %s to GIF', msg.uid, msg.mime)
-                    msg.file.close()
-                    f.seek(0)
-                    if os.fstat(f.fileno()).st_size > self.MAX_FILE_SIZE:
-                        raise EFBMessageError(self._("Image size is too large. (IS02)"))
-                    r: wxpy.SentMessage = self._bot_send_image(chat, f.name, f)
+                        img = Image.open(file)
+                        try:
+                            alpha = img.split()[3]
+                            mask = Image.eval(alpha, lambda a: 255 if a <= 128 else 0)
+                        except IndexError:
+                            mask = Image.eval(img.split()[0], lambda a: 0)
+                        img = img.convert('RGB').convert('P', palette=Image.ADAPTIVE, colors=255)
+                        img.paste(255, mask)
+                        img.save(f, transparency=255)
+                        msg.path = f.name
+                        self.logger.debug('[%s] Image converted from %s to GIF', msg.uid, msg.mime)
+                        file.close()
+                        f.seek(0)
+                        if os.fstat(f.fileno()).st_size > self.MAX_FILE_SIZE:
+                            raise EFBMessageError(self._("Image size is too large. (IS02)"))
+                        r = self._bot_send_image(chat, f.name, f)
+                    finally:
+                        if not file.closed:
+                            file.close()
+            elif convert_to == "image/jpeg":
+                with NamedTemporaryFile(suffix=".jpg") as f:
+                    try:
+                        img = Image.open(file).convert('RGBA')
+                        out = Image.new("RGBA", img.size, (255, 255, 255, 255))
+                        out.paste(img, img)
+                        out.convert('RGB').save(f)
+                        msg.path = f.name
+                        self.logger.debug('[%s] Image converted from %s to JPEG', msg.uid, msg.mime)
+                        file.close()
+                        f.seek(0)
+                        if os.fstat(f.fileno()).st_size > self.MAX_FILE_SIZE:
+                            raise EFBMessageError(self._("Image size is too large. (IS02)"))
+                        r = self._bot_send_image(chat, f.name, f)
+                    finally:
+                        if not file.closed:
+                            file.close()
+            else:
+                try:
+                    if os.fstat(file.fileno()).st_size > self.MAX_FILE_SIZE:
+                        raise EFBMessageError(self._("Image size is too large. (IS01)"))
+                    self.logger.debug("[%s] Sending %s (image) to WeChat.", msg.uid, msg.path)
+                    r = self._bot_send_image(chat, msg.path, file)
+                finally:
+                    if not file.closed:
+                        file.close()
             if msg.text and not msg.is_forward:
                 self._bot_send_msg(chat, msg.text)
         elif msg.type in (MsgType.File, MsgType.Audio):
@@ -413,16 +430,22 @@ class WeChatChannel(EFBChannel):
             raise EFBOperationNotSupported()
 
     def get_chat_picture(self, chat: EFBChat) -> IO[bytes]:
-        chat = self.chats.search_chat(uid=chat.chat_uid)
-        wxpy_chat: wxpy.Chat = chat.vendor_specific['wxpy_object']
+        uid = chat.chat_uid
+        if uid in wxpy.Chat.SYSTEM_ACCOUNTS:
+            wxpy_chat: wxpy.Chat = wxpy.Chat(wxpy.utils.wrap_user_name(uid), self.bot)
+        else:
+            wxpy_chat = wxpy.utils.ensure_one(self.bot.search(puid=uid))
         f = None
         try:
             f = tempfile.NamedTemporaryFile(suffix='.jpg')
-            wxpy_chat.get_avatar(f.name)
+            data = wxpy_chat.get_avatar(None)
+            if not data:
+                raise EFBOperationNotSupported()
+            f.write(data)
             f.seek(0)
             return f
-        except TypeError:
-            if hasattr(f, 'close'):
+        except (TypeError, ResponseError):
+            if f is not None:
                 f.close()
             raise EFBOperationNotSupported()
 
@@ -626,3 +649,6 @@ class WeChatChannel(EFBChannel):
         res += base64.b64encode(file.getvalue()).decode()
         res += print_st()
         return res
+
+    def get_message_by_id(self, chat: EFBChat, msg_id: MessageID) -> Optional['EFBMsg']:
+        raise EFBOperationNotSupported()
