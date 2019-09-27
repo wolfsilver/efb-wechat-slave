@@ -2,9 +2,9 @@
 
 from typing import Dict, Any, TYPE_CHECKING
 
-import itchat.utils
+from .vendor.itchat import utils as itchat_utils
 
-from . import wxpy
+from .vendor import wxpy
 if TYPE_CHECKING:
     from . import WeChatChannel
 
@@ -113,7 +113,8 @@ class ExperimentalFlagsManager:
         'delete_on_edit': False,
         'app_shared_link_mode': 'ignore',
         'puid_logs': None,
-        'send_stickers_and_gif_as_jpeg': False
+        'send_stickers_and_gif_as_jpeg': False,
+        'system_chats_to_include': ['filehelper']
     }
 
     def __init__(self, channel: 'WeChatChannel'):
@@ -138,8 +139,8 @@ def wechat_string_unescape(content: str) -> str:
     """
     if not content:
         return ""
-    d = {"Content": content}
-    itchat.utils.msg_formatter(d, "Content")
+    d: Dict[str, Any] = {"Content": content}
+    itchat_utils.msg_formatter(d, "Content")
     for i in WC_EMOTICON_CONVERSION:
         d['Content'] = d['Content'].replace(i, WC_EMOTICON_CONVERSION[i])
     return d['Content']
