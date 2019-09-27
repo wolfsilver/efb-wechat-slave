@@ -262,8 +262,7 @@ class SlaveMessageManager:
                 title=title,
                 description=description,
                 image=image,
-                url=url,
-                notice=title.find("取件通知") != -1
+                url=url
             )
         else:
             efb_msg.type = MsgType.Text
