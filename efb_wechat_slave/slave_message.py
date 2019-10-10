@@ -416,7 +416,12 @@ class SlaveMessageManager:
         Returns:
             File path, MIME, File
         """
-        file = tempfile.NamedTemporaryFile()
+        guess_file_type = re.search("\..*$", msg.file_name)
+        if guess_file_type:
+            guess_file_type = guess_file_type.group(0)
+        else:
+            guess_file_type = ''
+        file = tempfile.NamedTemporaryFile(suffix=guess_file_type)
         try:
             if msg.type == consts.ATTACHMENT:
                 with self.file_download_mutex_lock:
