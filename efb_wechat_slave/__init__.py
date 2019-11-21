@@ -327,7 +327,7 @@ class WeChatChannel(EFBChannel):
                 else:
                     tgt_text = ""
                 if isinstance(chat, wxpy.Group) and not msg.target.author.is_self:
-                    tgt_alias = "@%s\u2005 " % msg.target.author.display_name
+                    tgt_alias = "@%s\u2005 " % msg.target.author.chat_name
                 else:
                     tgt_alias = ""
                 msg.text = "%s%s\n\n%s" % (tgt_alias, tgt_text, msg.text)
