@@ -1,6 +1,6 @@
 
-EFB WeChat Slave Channel
-************************
+EFB 微信从端
+************
 
 .. image:: https://img.shields.io/pypi/v/efb-wechat-slave.svg
    :target: https://pypi.org/project/efb-wechat-slave/
@@ -10,47 +10,43 @@ EFB WeChat Slave Channel
    :target: https://crowdin.com/project/ehforwarderbot/
    :alt: Translate this project
 
-   .. image:: https://i.imgur.com/dCZfh14.png
-      :alt: This project proudly supports #SayNoToWeChat campaign.
+.. image:: https://github.com/blueset/efb-wechat-slave/blob/master/banner.png
+   :alt: Banner
 
-`README in other languages <.>`_.
+.. image:: https://i.imgur.com/dCZfh14.png
+   :alt: This project proudly supports #SayNoToWeChat campaign.
 
-**Channel ID**: ``blueset.wechat``
+`其他语言的 README <.>`_.
 
-EWS is an EFB Slave Channel for WeChat, based on reversed engineered
-WeChat Web API, modified ``wxpy``, and ``itchat``.
+**信道 ID**: ``blueset.wechat``
 
-Some source code in this repository was adapted from `youfou/wxpy
-<https://github.com/youfou/wxpy>`_ and `littlecodersh/ItChat
-<https://github.com/littlecodersh/ItChat/>`_.
+EWS 是兼容 EH Forwarder Bot 的微信从端，基于逆向工程的微信网页版、修改版 ``wxpy`` 和 ``ItChat``。
 
-
-Alpha Version
-=============
-
-This is an unstable alpha version, and its functionality may change at
-any time.
+本项目的部分代码修改自 `youfou/wxpy
+<https://github.com/youfou/wxpy>`_、`littlecodersh/ItChat
+<https://github.com/littlecodersh/ItChat/>`_。
 
 
-Attention
-=========
+Alpha 版本
+==========
 
-Since mid-2016, we have received feedback where some users』 access to
-Web WeChat was banned. Most of the users were unbanned within 1 week
-to 3 months. When a user is banned for Web WeChat access, a pop up
-would be shown when they try to use it, stating that they 「cannot use
-Web WeChat temporary」, and are recommended to 「use mobile app or
-Windows/macOS instead」.
-
-The ban will NOT affect your access to any other client. The cause of
-such ban is not clear.
-
-Please proceed with caution, and avoid using this Channel if you have
-special need of Web WeChat access. Learn more in the Project Wiki.
+该从端非稳定版本，且其功能随时可能会被更改。
 
 
-Dependencies
-============
+注意
+====
+
+自 2016
+年中旬以来，陆续有用户报告其微信网页版登录被腾讯封禁。表现为用任何方式登录微信网页版提示「当前登录环境异常。为了你的账号安全，暂时不能登录
+Web 微信。你可以通过手机客户端或 Windows 微信登录」或类似的提示。大部分用户会在封禁后三个月内解封，不同用户的解封耗时不同。
+
+该封禁不影响其他客户端的登录。目前封禁的原因尚不明确。
+
+如果你对网页版登录有要求的话，请慎用此信道。详细的相关信息请参见项目 Wiki。
+
+
+依赖
+====
 
 * Python >= 3.6
 
@@ -63,49 +59,46 @@ Dependencies
 * pillow
 
 
-Install and Enable
-==================
+安装并启用
+==========
 
-1. Install all binary dependencies stated above
+1. 安装所需的依赖
 
-2. Install
+2. 安装从端
 
     ::
        pip3 install efb-wechat-slave
 
-3. Enable EWS in ``config.yaml`` of the current profile.
+3. 在当前配置档案（Profile）的 ``config.yaml`` 中启用 EWS。
 
-    The config directory may vary based on your settings.
+    当前配置文件夹的位置会根据用户的设定而改变。
 
-    **(In EFB 2.0.0a1, the default configuration directory is**
+    **(EFB 2.0.0a1 中，默认的配置文件夹位于**
     ``~/.ehforwarderbot/profiles/default`` **)**
 
 
-Alternative installation methods
---------------------------------
+其他安装方式
+------------
 
-ETM also has other alternative installation methods contributed by the
-community, including:
+社区也贡献了其他的 ETM 安装方式，包括：
 
-* `AUR package
-   <https://aur.archlinux.org/packages/python-efb-telegram-master-git>`_
-   maintained by `KeLiu <https://github.com/specter119>`_
-   (``python-efb-telegram-master-git``)
+* `KeLiu <https://github.com/specter119>`_ 维护的 `AUR 软件包
+  <https://aur.archlinux.org/packages/python-efb-telegram-master-git>`_
+  (``python-efb-telegram-master-git``)
 
-* Other `installation scripts and containers (e.g. Docker)
-   <https://github.com/blueset/ehForwarderBot/wiki/Channels-Repository#scripts-and-containers-eg-docker>`_
+* 其他\ `安装脚本和容器（Docker 等）
+  <https://github.com/blueset/ehForwarderBot/wiki/Channels-Repository#scripts-and-containers-eg-docker>`_
 
 
-Optional configuration
-======================
+可选配置
+========
 
-You can enable experimental features by creating a configuration file,
-which is located at ``<directory to current
-profile>/blueset.wechat/config.yaml``.
+EWS 支持使用可选的配置文件来启用实验功能。配置文件存储于 \
+``<当前配置档案文件夹>/blueset.wechat/config.yaml``。
 
 
-Example configuration file
---------------------------
+示例配置
+--------
 
 ::
 
@@ -119,171 +112,166 @@ Example configuration file
        option_three: "foobar"
 
 
-FAQ
-===
+常见问题
+========
 
-* **How to switch to another WeChat account?** Please log out from
-   your phone, and log in again with another one.
+* **如何切换已登录的微信账号？** 请登出当前的账号，并使用其他的微信手机登录。
 
-* **How to log in with multiple WeChat accounts?** Please indicate
-   different Instance ID in the profile’s config file.
+* **如何登录两个微信账号？** 请在 EFB 配置档案中指定不同的实例 ID。
 
-* **Is EWS stable?** EWS depends on `ItChat
-   <https://github.com/littlecodersh/ItChat>`_ project and Web WeChat
-   protocol. According to `ItChat FAQ
-   <https://itchat.readthedocs.io/zh/latest/FAQ/>`_ a stable session
-   that lasts over months is possible when you:
+* **EWS 稳定吗？** EWS 依赖于上游项目 `ItChat
+  <https://github.com/littlecodersh/ItChat>`_ 以及微信网页版的协议。根据 `ItChat
+  FAQ <https://itchat.readthedocs.io/zh/latest/FAQ/>`_
+  的说明，在满足以下情况的条件下，微信登录能够保持数个月稳定登录:
 
-   * have a stable internet connection on your server, and
+  * 服务器有稳定的网络连接，并且
 
-   * **keep your WeChat app always online**.
+  * **保持手机客户端长期在线。**
 
 
-Known Issues
-============
+已知问题
+========
 
-* Due to the design of Web WeChat, chats with no name or identical
-   name might be identified as the same chat, which might lead to
-   misdelivery of messages.
+* 就于微信网页版的工作原理，目前对于没有名称的会话、以及重名的会话支持较差，可能会有消息传递错误等问题。
 
-* Similarly, in limited situations, a chat will be seen as a 「new
-   chat」 when its name is changed, and the 「old chat」 is thus
-   disappeared.
+* 同理，部分情况下变更名称的会话会被视为全新的会话，而「旧会话」随即消失。
 
-* Only features supported by Web WeChat are supported by EWS, which
-   means: - No 「Moments」 - No money transfers - Cannot send voice
-   messages - Cannot send locations - etc.
+* EWS 只支持网页版微信所支持的功能。这意味着：- 没有“朋友圈”功能 - 没有转账功能 - 不能发送语音消息 - 不能发送定位 等等。
 
-* Some multimedia files (pictures, stickers, files, etc.) might be
-   blocked by Web WeChat, and no data is received, especially for
-   stickers. In such cases, you will be reminded to check your phone.
+* 部分文件、图片、表情等多媒体文件会被网页版微信截断，即收不到任何数据，尤以表情为甚。因此造成的偶发现象，会提醒用户使用移动客户端查看。
 
 
-Experimental features
-=====================
+实验性功能
+==========
 
-The following flags are experimental features, may change, break, or
-disappear at any time. Use at your own risk.
+以下的实验性功能随时可能被更改或被删除，请自行承担相关风险。
 
-* ``refresh_friends`` *(bool)* [Default: ``false``]
+* ``refresh_friends`` *(bool)* [默认: ``false``]
 
-   Force refresh the entire chat list every time when queried.
+  每次查询时强制刷新整个聊天列表。
 
-* ``first_link_only`` *(bool)* [Default: ``false``]
+* ``first_link_only`` *(bool)* [默认: ``false``]
 
-   Send only the first article link when a message contains multiple
-   articles.
+  当消息包含多个文章时，仅发送第一篇文章的链接。
 
-* ``max_quote_length`` *(int)* [Default: ``-1``]
+* ``max_quote_length`` *(int)* [默认: ``-1``]
 
-   Length limit of quoted message. Set to ``0`` to disable quotation.
-   Set to ``-1`` to include the full quoted message
+  引用消息的长度限制。设置为 ``0`` 以禁用报价。设置为 ``-1`` 以包含全部引用的消息
 
-* ``qr_reload`` *(str)* [Default: ``"master_qr_code"``]
+* ``qr_reload`` *(str)* [默认: ``"master_qr_code"``]
 
-   Method to log in when you are logged out while EWS is running.
-   Options:
+  重新登录时使用的登录方式。选项：
 
-   * ``"console_qr_code"``: Send QR code to standard output
-      (``stdout``).
+  * 将二维码和提示输出到系统标准输出（``stdout``）。
 
-   * ``"master_qr_code"``: Send QR code to master channel. **Note:**
-      QR code might change frequently.
+  * 将二维码和提示发送到主端。 **注意** 登录时二维码会频繁刷新，请注意二维码可能会导致刷屏。
 
-* ``on_log_out`` *(str)* [Default: ``"command"``]
+* ``on_log_out`` *(str)* [默认: ``"command"``]
 
-   Behavior when WeChat server logged your account out. Options:
+  微信服务器将用户登出时的操作。选项：
 
-   * ``"idle"``: Only notify the user.
+  * ``"idle"``：仅通知用户。
 
-   * ``"reauth"``: Notify the user and start log in immediately.
+  * ``"reauth"``：通知用户，并立即开始重新登录。
 
-   * ``"command"``: Notify the user, and wait for user to start log
-      in manually.
+  * ``"command"``：通知用户，并等待用户启动重新登录过程。
 
-* ``imgcat_qr`` *(bool)* [Default: ``false``]
+* ``imgcat_qr`` *(bool)* [默认: ``false``]
 
-   Use `iTerm2 image protocol
-   <https://www.iterm2.com/documentation-images.html>`_ to show QR
-   code. This is only applicable to iTerm 2 users.
+  使用 `iTerm2 图像协议 <https://www.iterm2.com/documentation-images.html>`_
+  显示二维码。本功能只适用于 iTerm2 用户。
 
-* ``delete_on_edit`` *(bool)* [Default: ``false``]
+* ``delete_on_edit`` *(bool)* [默认: ``false``]
 
-   Turn on to edit message by recall and resend. Edit message is
-   disabled by default.
+  以撤回并重新发送的方式代替编辑消息。默认禁止编辑消息。
 
-* ``app_shared_link_mode`` *(str)* [Default: ``"ignore"``]
+* ``app_shared_link_mode`` *(str)* [默认：``"ignore"``]
 
-   Behavior to deal with thumbnails when a message shared by 3rd party
-   apps is received.
+  在收到第三方合作应用分享给微信的链接时，其附带的预览图以何种形式发送。
 
-   * ``"ignore"``: Ignore thumbnail
+  * ``"ignore"``：忽略略缩图
 
-   * ``"upload"``: Upload to public image hosting (https://sm.ms ),
-      and output its delete link to the log.
+  * ``"upload"``：将缩略图上传到公开图床（https://sm.ms），并在日志中输出图片的删除链接。
 
-   * ``"image"``: Send thumbnail as image (not recommended).
+  * ``"image"``：将消息以图片形式发送（不推荐）
 
-* ``puid_logs`` *(str)* [Default: ``null``]
+* ``puid_logs`` *(str)* [默认：``null``]
 
-   Output PUID related log to the path indicated. Please use absolute
-   path. In case of high volume of messages and chats, PUID log may
-   occupy a large amount of space.
+  输出 PUID 相关日志到指定日志路径。请使用绝对路径。PUID 日志可能会根据会话数量和消息吞吐量而占用大量存储空间。
 
-* ``send_stickers_and_gif_as_jpeg`` *(bool)* [Default: ``false``]
+* ``send_image_as_file`` *(bool)* [默认：``false``]
 
-   Send stickers and GIF images as JPEG to bypass Web WeChat custom
-   sticker limits as a workaround. See `#48
-   <https://github.com/blueset/efb-wechat-slave/issues/48>`_ for
-   details.
+  以 JPEG 图片方式发送自定义表情和 GIF，用于临时绕过微信网页版的自定义表情限制。详见 `#48
+  <https://github.com/blueset/efb-wechat-slave/issues/48>`_。
 
-* ``system_chats_to_include`` *(list of str)** [Default:
-   ``[filehelper]``]
+* ``system_chats_to_include`` *(list of str)** [默认: ``[filehelper]``]
 
-   List of system chats to show in the default chat list. It must be
-   zero to four of the following: ``filehelper`` (File Helper),
-   ``fmessage`` (Friend suggestions), ``newsapp`` (Tencent News) and,
-   ``weixin`` (WeChat Team).
+  在默认会话列表中显示的特殊系统会话。其内容仅能为
+  ``filehelper``（文件传输助手）、``fmessage``（朋友推荐消息）、``newsapp``（腾讯新闻）、``weixin``（微信团队）其中零到四个选项。
 
 
-``vendor_specific``
-===================
+供应商特定选项（``vendor_specific``）
+=====================================
 
-``EFBChat`` from EWS provides the following ``vendor_specific`` items:
+EWS 的 ``EFBChat`` 提供了以下的 ``vendor_specific`` 项目：
 
-* ``is_mp`` *(bool)* If the chat is an 「Official Account」.
+* ``is_mp`` *(bool)* 该会话是否为公众号。
 
-* ``is_contact`` *(bool)* Unknown. Extracted from API.
+* ``is_contact`` *(bool)* 不明。提取自 API。
 
-* ``is_blacklist_contact`` *(bool)* If the chat is blacklisted.
+* ``is_blacklist_contact`` *(bool)* 该用户是否被加入黑名单。
 
-* ``is_conversation_contact`` *(bool)* Unknown. Extracted from API.
+* ``is_conversation_contact`` *(bool)* 不明。提取自 API。
 
-* ``is_room_contact_del`` *(bool)* Unknown. Extracted from API.
+* ``is_room_contact_del`` *(bool)* 不明。提取自 API。
 
-* ``is_room_owner`` *(bool)* If the member is the creator of a group
-   chat.
+* ``is_room_owner`` *(bool)* 该用户是否为群组创建者。
 
-* ``is_brand_contact`` *(bool)* Unknown. Extracted from API.
+* ``is_brand_contact`` *(bool)* 不明。提取自 API。
 
-* ``is_sp_contact`` *(bool)* Unknown. Extracted from API.
+* ``is_sp_contact`` *(bool)* 不明。提取自 API。
 
-* ``is_shield_user`` *(bool)* Unknown. Extracted from API.
+* ``is_shield_user`` *(bool)* 不明。提取自 API。
 
-* ``is_muted`` *(bool)* If the chat is muted by the user from WeChat.
+* ``is_muted`` *(bool)* 该会话是否在微信中开启免打扰。
 
-* ``is_top`` *(bool)* If the chat is pinned to top by the user from
-   WeChat.
+* ``is_top`` *(bool)* 该会话是否在微信中被置顶。
 
-* ``has_photo_album`` *(bool)* Unknown. Extracted from API.
+* ``has_photo_album`` *(bool)* 不明。提取自 API。
 
 
-Experimental translation support
-================================
+许可协议
+========
 
-EWS supports translated user interface prompts experimentally, by
-setting the locale environmental variable (``LANGUAGE``, ``LC_ALL``,
-``LC_MESSAGES`` or ``LANG``) to one of our `supported languages
-<https://crowdin.com/project/ehforwarderbot/>`_. Meanwhile, you can
-help to translate this project into your languages on `our Crowdin
-page <https://crowdin.com/project/ehforwarderbot/>`_.
+EWS 使用了 `GNU Affero General Public License 3.0
+<https://www.gnu.org/licenses/agpl-3.0.txt>`_ 或更新版本作为其开源许可:
+
+::
+
+   EFB WeChat Slave Channel: An slave channel for EH Forwarder Bot.
+   Copyright (C) 2016 - 2019 Eana Hufwe, and the EFB WeChat Slave Channel contributors
+   All rights reserved.
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Affero General Public License as
+   published by the Free Software Foundation, either version 3 of the
+   License, or any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU Affero General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+翻译支持
+========
+
+EWS 支持了界面本地化翻译。您可以将语言环境变量（``LANGUAGE``、``LC_ALL``、``LC_MESSAGES`` 或
+``LANG``）设为一种\ `已支持的语言
+<https://crowdin.com/project/ehforwarderbot/>`_。同时，您也可以在我们的 `Crowdin
+页面 <https://crowdin.com/project/ehforwarderbot/>`_\ 里将 EWS 翻译为您的语言。
+
+備註: 如果您使用源代码安装，您需要手动编译翻译字符串文件（``.mo``）才可启用翻译后的界面。
