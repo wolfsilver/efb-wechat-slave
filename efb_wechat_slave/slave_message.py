@@ -1,24 +1,29 @@
 # coding: utf-8
 
+import json
 import logging
-import tempfile
-import uuid
-import threading
 import re
-from typing import TYPE_CHECKING, Callable, Optional, Tuple, IO, Dict
+import tempfile
+import threading
+import uuid
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable, Optional, Tuple, Dict, BinaryIO
+from xml.etree import ElementTree as ETree
+from xml.etree.ElementTree import Element
 
 import magic
 import requests
-import xmltodict
 from PIL import Image
 
-from ehforwarderbot import EFBMsg, MsgType, EFBChat, coordinator
-from ehforwarderbot.status import EFBMessageRemoval
-from ehforwarderbot.message import EFBMsgLocationAttribute, EFBMsgLinkAttribute, EFBMsgCommands, EFBMsgCommand, \
-    EFBMsgSubstitutions
+from ehforwarderbot import Message, MsgType, Chat, coordinator
+from ehforwarderbot.chat import ChatMember, SystemChatMember
+from ehforwarderbot.message import LocationAttribute, LinkAttribute, MessageCommands, MessageCommand, \
+    Substitutions
+from ehforwarderbot.status import MessageRemoval, ChatUpdates
+from ehforwarderbot.types import MessageID
 from . import constants
 from . import utils as ews_utils
-from .vendor import wxpy, itchat
+from .vendor import wxpy
 from .vendor.wxpy.api import consts
 
 if TYPE_CHECKING:
@@ -43,6 +48,22 @@ class SlaveMessageManager:
         self.logger: logging.Logger = logging.getLogger(__name__)
         self.wechat_msg_register()
         self.file_download_mutex_lock = threading.Lock()
+        # Message ID: [JSON ID, remaining count]
+        self.recall_msg_id_conversion: Dict[str, Tuple[str, int]] = dict()
+
+    def get_chat_and_author(self, msg: wxpy.Message) -> Tuple[Chat, ChatMember]:
+        chat = self.channel.chats.wxpy_chat_to_efb_chat(msg.chat)
+        author: ChatMember
+        if msg.author.user_name == self.bot.self.user_name and chat.self:
+            author = chat.self
+        else:
+            try:
+                author = chat.get_member(msg.author.puid)
+            except KeyError:
+                # Enrol the new member to cache on the spot.
+                name, alias = self.channel.chats.get_name_alias(msg.author)
+                author = chat.add_member(uid=msg.author.puid, name=name, alias=alias, vendor_specific={'is_mp': False})
+        return chat, author
 
     class Decorators:
         @classmethod
@@ -51,24 +72,30 @@ class SlaveMessageManager:
                 logger = logging.getLogger(__name__)
                 logger.debug("[%s] Raw message: %r", msg.id, msg.raw)
 
-                efb_msg: Optional[EFBMsg] = func(self, msg, *args, **kwargs)
+                efb_msg: Optional[Message] = func(self, msg, *args, **kwargs)
 
                 if efb_msg is None:
                     return
 
-                efb_msg.uid = getattr(msg, "id", constants.INVALID_MESSAGE_ID + str(uuid.uuid4()))
-
-                chat: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(msg.chat)
-
-                author: EFBChat = self.channel.chats.wxpy_chat_to_efb_chat(msg.author)
-
-                # Do not override what's defined in the sub-functions
-                efb_msg.chat = efb_msg.chat or chat
-                efb_msg.author = efb_msg.author or author
-
-                logger.debug("[%s] Chat: %s, Author: %s", efb_msg.uid, efb_msg.chat, efb_msg.author)
+                if getattr(coordinator, 'master', None) is None:
+                    logger.debug("[%s] Dropping message as master channel is not ready yet.", efb_msg.uid)
+                    return
 
                 efb_msg.deliver_to = coordinator.master
+
+                # Format message IDs as JSON of List[List[str]].
+                efb_msg.uid = MessageID(json.dumps(
+                    [[str(getattr(msg, "id", constants.INVALID_MESSAGE_ID + str(uuid.uuid4())))]]
+                ))
+
+                if not efb_msg.chat or not efb_msg.author:
+                    chat, author = self.get_chat_and_author(msg)
+
+                    # Do not override what's defined in the wrapped methods
+                    efb_msg.chat = efb_msg.chat or chat
+                    efb_msg.author = efb_msg.author or author
+
+                logger.debug("[%s] Chat: %s, Author: %s", efb_msg.uid, efb_msg.chat, efb_msg.author)
 
                 coordinator.send_message(efb_msg)
                 if efb_msg.file:
@@ -76,7 +103,8 @@ class SlaveMessageManager:
 
             def thread_wrapper(*args, **kwargs):
                 """Run message requests in separate threads to prevent blocking"""
-                threading.Thread(target=wrap_func, args=args, kwargs=kwargs).run()
+                threading.Thread(target=wrap_func, args=args, kwargs=kwargs,
+                                 name=f"EWS slave message thread running {func}").run()
 
             return thread_wrapper
 
@@ -99,69 +127,133 @@ class SlaveMessageManager:
             self.logger.debug("WeChat System Message:\n%s", repr(msg))
 
     @Decorators.wechat_msg_meta
-    def wechat_text_msg(self, msg: wxpy.Message) -> Optional[EFBMsg]:
+    def wechat_text_msg(self, msg: wxpy.Message) -> Optional[Message]:
         if msg.chat.user_name == "newsapp" and msg.text.startswith("<mmreader>"):
             return self.wechat_newsapp_msg(msg)
         if msg.text.startswith("http://weixin.qq.com/cgi-bin/redirectforward?args="):
             return self.wechat_location_msg(msg)
-        efb_msg = EFBMsg()
-        efb_msg.text = ews_utils.wechat_string_unescape(msg.text)
-        efb_msg.type = MsgType.Text
-        if msg.is_at:
+        chat, author = self.get_chat_and_author(msg)
+        if self.channel.flag("text_post_processing"):
+            text = ews_utils.wechat_string_unescape(msg.text)
+        else:
+            text = msg.text or ""
+        efb_msg = Message(
+            chat=chat, author=author,
+            text=text,
+            type=MsgType.Text
+        )
+        if msg.is_at and chat.self:
             found = False
             for i in re.finditer(r"@([^@\s]*)(?=\u2005|$|\s)", msg.text):
                 if i.groups()[0] in (self.bot.self.name, msg.chat.self.display_name):
                     found = True
-                    efb_msg.substitutions = EFBMsgSubstitutions({
-                        i.span(): EFBChat(self.channel).self()
+                    efb_msg.substitutions = Substitutions({
+                        i.span(): chat.self
                     })
             if not found:
                 append = "@" + self.bot.self.name
-                efb_msg.substitutions = EFBMsgSubstitutions({
-                    (len(msg.text) + 1, len(msg.text) + 1 + len(append)): EFBChat(self.channel).self()
+                efb_msg.substitutions = Substitutions({
+                    (len(msg.text) + 1, len(msg.text) + 1 + len(append)): chat.self
                 })
                 efb_msg.text += " " + append
         return efb_msg
 
     @Decorators.wechat_msg_meta
-    def wechat_system_unsupported_msg(self, msg: wxpy.Message) -> Optional[EFBMsg]:
+    def wechat_system_unsupported_msg(self, msg: wxpy.Message) -> Optional[Message]:
         if msg.raw['MsgType'] in (50, 52, 53):
             text = self._("[Incoming audio/video call, please check your phone.]")
         else:
             return None
-        efb_msg = EFBMsg()
-        efb_msg.text = text
-        efb_msg.type = MsgType.Unsupported
+        efb_msg = Message(
+            text=text,
+            type=MsgType.Unsupported,
+        )
         return efb_msg
 
+    NEW_CHAT_PATTERNS = {
+        "invited you to a group", "グループチャットに参加しました",
+        "现在可以开始聊天了。", "Start chatting!", "チャットを始めましょう!"
+        "You've joined this group chat.",
+        "邀请你加入了群聊", "邀请你和", "invited you and",
+        "invited you to a group chat with"
+    }
+    CHAT_UPDATE_PATTERNS = {
+        "修改群名为", "changed the group name to"
+    }
+    NEW_CHAT_MEMBER_PATTERNS = {
+        "グループチャットに招待しました", "to the group chat"
+    }
+    CHAT_MEMBER_UPDATE_PATTERNS = {
+        "グループマネージャーになりました",
+    }
+    REMOVE_CHAT_MEMBER_PATTERNS = {
+        "移出了群聊"
+    }
+    CHAT_AND_MEMBER_UPDATE_PATTERNS = (
+            CHAT_UPDATE_PATTERNS | NEW_CHAT_MEMBER_PATTERNS |
+            CHAT_MEMBER_UPDATE_PATTERNS | REMOVE_CHAT_MEMBER_PATTERNS
+    )
+
     @Decorators.wechat_msg_meta
-    def wechat_system_msg(self, msg: wxpy.Message) -> Optional[EFBMsg]:
+    def wechat_system_msg(self, msg: wxpy.Message) -> Optional[Message]:
         if msg.recalled_message_id:
-            efb_msg = EFBMsg()
-            efb_msg.chat = self.channel.chats.wxpy_chat_to_efb_chat(msg.chat)
-            efb_msg.author = self.channel.chats.wxpy_chat_to_efb_chat(msg.sender)
-            efb_msg.uid = str(msg.recalled_message_id)
-            coordinator.send_status(EFBMessageRemoval(source_channel=self.channel,
-                                                      destination_channel=coordinator.master,
-                                                      message=efb_msg))
+            recall_id = str(msg.recalled_message_id)
+            # check conversion table first
+            if recall_id in self.recall_msg_id_conversion:
+                # prevent feedback of messages deleted by master channel.
+                del self.recall_msg_id_conversion[recall_id]
+                return None
+                # val = self.recall_msg_id_conversion.pop(recall_id)
+                # val[1] -= 1
+                # if val[1] > 0:  # not all associated messages are recalled.
+                #     return None
+                # else:
+                #     efb_msg.uid = val[0]
+            else:
+                # Format message IDs as JSON of List[List[str]].
+                chat, author = self.get_chat_and_author(msg)
+                efb_msg = Message(
+                    chat=chat, author=author,
+                    uid=MessageID(json.dumps([[recall_id]]))
+                )
+            coordinator.send_status(MessageRemoval(source_channel=self.channel,
+                                                   destination_channel=coordinator.master,
+                                                   message=efb_msg))
             return None
-        efb_msg = EFBMsg()
-        efb_msg.text = msg.text
-        efb_msg.type = MsgType.Text
-        efb_msg.author = EFBChat(self.channel).system()
-        return efb_msg
+        chat, _ = self.get_chat_and_author(msg)
+        try:
+            author = chat.get_member(SystemChatMember.SYSTEM_ID)
+        except KeyError:
+            author = chat.add_system_member()
+        if any(i in msg.text for i in self.NEW_CHAT_PATTERNS):
+            coordinator.send_status(ChatUpdates(
+                channel=self.channel,
+                new_chats=(chat.uid,)
+            ))
+        elif any(i in msg.text for i in self.CHAT_AND_MEMBER_UPDATE_PATTERNS):
+            # TODO: detect actual member changes from message text
+            coordinator.send_status(ChatUpdates(
+                channel=self.channel,
+                modified_chats=(chat.uid,)
+            ))
+        return Message(
+            text=msg.text,
+            type=MsgType.Text,
+            chat=chat,
+            author=author,
+        )
 
     @Decorators.wechat_msg_meta
-    def wechat_location_msg(self, msg: wxpy.Message) -> EFBMsg:
-        efb_msg = EFBMsg()
+    def wechat_location_msg(self, msg: wxpy.Message) -> Message:
+        efb_msg = Message()
         efb_msg.text = msg.text.split('\n')[0][:-1]
-        efb_msg.attributes = EFBMsgLocationAttribute(latitude=float(msg.location['x']),
-                                                     longitude=float(msg.location['y']))
+        efb_msg.attributes = LocationAttribute(latitude=float(msg.location['x']),
+                                               longitude=float(msg.location['y']))
         efb_msg.type = MsgType.Location
         return efb_msg
 
     def wechat_sharing_msg(self, msg: wxpy.Message):
-        # This method is not wrapped by wechat_msg_meta decorator, thus no need to return EFBMsg object.
+        # This method is not wrapped by wechat_msg_meta decorator, thus no need to return Message object.
         self.logger.debug("[%s] Raw message: %s", msg.id, msg.raw)
         links = msg.articles
         if links is None:
@@ -170,30 +262,32 @@ class SlaveMessageManager:
                 return self.wechat_unsupported_msg(msg)
             else:
                 try:
-                    xml = xmltodict.parse(msg.raw.get('Content'))
-                    appmsg_type = xml.get('msg').get('appmsg').get('type')
-                    source = xml.get('msg').get('appinfo').get('appname')
-                    if appmsg_type == 2:  # Image
+                    xml = ETree.fromstring(msg.raw.get('Content'))
+                    appmsg_type = self.get_node_text(xml, './appmsg/type', "")
+                    source = self.get_node_text(xml, './appinfo/appname', "")
+                    if appmsg_type == '2':  # Image
                         return self.wechat_shared_image_msg(msg, source)
                     elif appmsg_type in ('3', '5'):
-                        title = xml.get('msg', {}).get('appmsg', {}).get('title', "")
-                        des = xml.get('msg', {}).get('appmsg', {}).get('des', "")
-                        url = xml.get('msg', {}).get('appmsg', {}).get('url', "")
+                        title = self.get_node_text(xml, './appmsg/title', "")
+                        des = self.get_node_text(xml, './appmsg/des', "")
+                        url = self.get_node_text(xml, './appmsg/url', "")
                         return self.wechat_shared_link_msg(msg, source, title, des, url)
                     elif appmsg_type in ('33', '36'):  # Mini programs (wxapp)
-                        title = xml.get('msg', {}).get('appmsg', {}).get('sourcedisplayname', None) or \
-                                xml.get('msg', {}).get('appmsg', {}).get('appinfo', {}).get('appname', None) or \
-                                xml.get('msg', {}).get('appmsg', {}).get('title', "")
-                        title = '小程序：' + title
-                        des = xml.get('msg', {}).get('appmsg', {}).get('title', "")
-                        url = xml.get('msg', {}).get('appmsg', {}).get('url', "")
+                        title = self.get_node_text(xml, './appmsg/sourcedisplayname', "") or \
+                                self.get_node_text(xml, './appmsg/appinfo/appname', "") or \
+                                self.get_node_text(xml, './appmsg/title', "")
+                        des = self.get_node_text(xml, './appmsg/title', "")
+                        url = self.get_node_text(xml, './appmsg/url', "")
                         return self.wechat_shared_link_msg(msg, source, title, des, url)
+                    elif appmsg_type == '1':  # Strange “app message” that looks like a text link
+                        msg.raw['text'] = self.get_node_text(xml, './appmsg/title', "")
+                        return self.wechat_text_msg(msg)
                     else:
                         # Unidentified message type
                         self.logger.error("[%s] Identified unsupported sharing message type. Raw message: %s",
                                           msg.id, msg.raw)
                         raise KeyError()
-                except KeyError:
+                except (TypeError, KeyError, ValueError, ETree.ParseError):
                     return self.wechat_unsupported_msg(msg)
         if self.channel.flag("first_link_only"):
             links = links[:1]
@@ -202,28 +296,28 @@ class SlaveMessageManager:
             self.wechat_raw_link_msg(msg, i.title, i.summary, i.cover, i.url)
 
     @Decorators.wechat_msg_meta
-    def wechat_unsupported_msg(self, msg: wxpy.Message) -> EFBMsg:
-        efb_msg = EFBMsg()
+    def wechat_unsupported_msg(self, msg: wxpy.Message) -> Message:
+        efb_msg = Message()
         efb_msg.type = MsgType.Unsupported
         efb_msg.text += self._("[Unsupported message, please check your phone.]")
         return efb_msg
 
     @Decorators.wechat_msg_meta
-    def wechat_shared_image_msg(self, msg: wxpy.Message, source: str, text: str = "", mode: str = "image") -> EFBMsg:
-        efb_msg = EFBMsg()
+    def wechat_shared_image_msg(self, msg: wxpy.Message, source: str, text: str = "", mode: str = "image") -> Message:
+        efb_msg = Message()
         efb_msg.type = MsgType.Image
-        efb_msg.text = self._("Via ") + source
+        efb_msg.text = self._("Via {source}").format(source=source)
         if text:
             efb_msg.text = "%s\n%s" % (text, efb_msg.text)
         efb_msg.path, efb_msg.mime, efb_msg.file = self.save_file(msg, app_message=mode)
         return efb_msg
 
     @Decorators.wechat_msg_meta
-    def wechat_shared_link_msg(self, msg: wxpy.Message, source: str, title: str, des: str, url: str) -> EFBMsg:
+    def wechat_shared_link_msg(self, msg: wxpy.Message, source: str, title: str, des: str, url: str) -> Message:
         share_mode = self.channel.flag('app_shared_link_mode')
-        thumb_url = re.search(r"<thumburl>(.*?)</thumburl>", msg.raw['Content'])
-        thumb_url = thumb_url and thumb_url.group(1)
-        via = (source and self._("Via ") + source) or ""
+        xml = ETree.fromstring(msg.raw.get('Content'))
+        thumb_url = self.get_node_text(xml, ".//thumburl", "")
+        via = self._("Via {source}").format(source=source) if source else ""
         if thumb_url:
             return self.wechat_raw_link_msg(msg, title, des, thumb_url, url)
         if share_mode == "image":
@@ -253,41 +347,51 @@ class SlaveMessageManager:
 
     @Decorators.wechat_msg_meta
     def wechat_raw_link_msg(self, msg: wxpy.Message, title: str, description: str, image: str,
-                            url: str, suffix: str = "") -> EFBMsg:
-        efb_msg = EFBMsg()
+                            url: str, suffix: str = "") -> Message:
+
         if url:
-            efb_msg.type = MsgType.Link
-            efb_msg.text = suffix
-            efb_msg.attributes = EFBMsgLinkAttribute(
-                title=title,
-                description=description,
-                image=image,
-                url=url
+            efb_msg = Message(
+                type=MsgType.Link,
+                text=suffix,
+                attributes=LinkAttribute(
+                    title=title,
+                    description=description,
+                    image=image,
+                    url=url
+                )
             )
         else:
-            efb_msg.type = MsgType.Text
-            efb_msg.text = "%s\n%s" % (title, description)
+            efb_msg = Message(
+                type=MsgType.Text,
+                text=f"{title}\n{description}",
+            )
             if suffix:
-                efb_msg.text += "\n%s" % suffix
+                efb_msg.text += f"\n{suffix}"
             if image:
-                efb_msg.text += "\n\n%s" % image
+                efb_msg.text += f"\n\n{image}"
         return efb_msg
 
-    def wechat_newsapp_msg(self, msg: wxpy.Message) -> Optional[EFBMsg]:
-        data = xmltodict.parse(msg.text)
-        news = data.get('mmreader', {}).get('category', {}).get('newitem', [])
+    def wechat_newsapp_msg(self, msg: wxpy.Message) -> Optional[Message]:
+        xml = ETree.fromstring(msg.raw.get('Content'))
+        news = xml.findall('.//category/item')
         e_msg = None
         if news:
-            e_msg = self.wechat_raw_link_msg(msg, news[0]['title'], news[0]['digest'],
-                                             news[0]['cover'], news[0]['shorturl'])
+            e_msg = self.wechat_raw_link_msg(msg,
+                                             self.get_node_text(news[0], 'title', ""),
+                                             self.get_node_text(news[0], 'digest', ""),
+                                             self.get_node_text(news[0], 'cover', ""),
+                                             self.get_node_text(news[0], 'shorturl', ""))
             for i in news[1:]:
-                self.wechat_raw_link_msg(msg, i['title'], i['digest'], i['cover'], i['shorturl'])
+                self.wechat_raw_link_msg(msg,
+                                         self.get_node_text(i, 'title', ""),
+                                         self.get_node_text(i, 'digest', ""),
+                                         self.get_node_text(i, 'cover', ""),
+                                         self.get_node_text(i, 'shorturl', ""))
         return e_msg
 
     @Decorators.wechat_msg_meta
-    def wechat_picture_msg(self, msg: wxpy.Message) -> EFBMsg:
-        efb_msg = EFBMsg()
-        efb_msg.type = MsgType.Image
+    def wechat_picture_msg(self, msg: wxpy.Message) -> Message:
+        efb_msg = Message(type=MsgType.Image)
         try:
             if msg.raw['MsgType'] == 47 and not msg.raw['Content']:
                 raise EOFError
@@ -304,9 +408,8 @@ class SlaveMessageManager:
         return efb_msg
 
     @Decorators.wechat_msg_meta
-    def wechat_sticker_msg(self, msg: wxpy.Message) -> EFBMsg:
-        efb_msg = EFBMsg()
-        efb_msg.type = MsgType.Sticker
+    def wechat_sticker_msg(self, msg: wxpy.Message) -> Message:
+        efb_msg = Message(type=MsgType.Sticker)
         try:
             if msg.raw['MsgType'] == 47 and not msg.raw['Content']:
                 raise EOFError
@@ -325,22 +428,24 @@ class SlaveMessageManager:
         return efb_msg
 
     @Decorators.wechat_msg_meta
-    def wechat_file_msg(self, msg: wxpy.Message) -> EFBMsg:
-        efb_msg = EFBMsg()
-        efb_msg.type = MsgType.File
+    def wechat_file_msg(self, msg: wxpy.Message) -> Message:
+        efb_msg = Message(type=MsgType.File)
         try:
+            file_name = msg.file_name
+            efb_msg.text = file_name or ""
+            app_name = msg.app_name
+            if app_name:
+                efb_msg.text = self._("{file_name} sent via {app_name}").format(file_name=file_name, app_name=app_name)
+            efb_msg.filename = file_name or ""
             efb_msg.path, efb_msg.mime, efb_msg.file = self.save_file(msg)
-            efb_msg.text = msg.file_name or ""
-            efb_msg.filename = msg.file_name or ""
         except EOFError:
             efb_msg.type = MsgType.Text
             efb_msg.text += self._("[Failed to download the file, please check your phone.]")
         return efb_msg
 
     @Decorators.wechat_msg_meta
-    def wechat_voice_msg(self, msg: wxpy.Message) -> EFBMsg:
-        efb_msg = EFBMsg()
-        efb_msg.type = MsgType.Audio
+    def wechat_voice_msg(self, msg: wxpy.Message) -> Message:
+        efb_msg = Message(type=MsgType.Voice)
         try:
             efb_msg.path, efb_msg.mime, efb_msg.file = self.save_file(msg)
             efb_msg.text = ""
@@ -350,9 +455,8 @@ class SlaveMessageManager:
         return efb_msg
 
     @Decorators.wechat_msg_meta
-    def wechat_video_msg(self, msg: wxpy.Message) -> EFBMsg:
-        efb_msg = EFBMsg()
-        efb_msg.type = MsgType.Video
+    def wechat_video_msg(self, msg: wxpy.Message) -> Message:
+        efb_msg = Message(type=MsgType.Video)
         try:
             if msg.file_size == 0:
                 raise EOFError
@@ -364,48 +468,48 @@ class SlaveMessageManager:
             efb_msg.text += self._("[Failed to download the video message, please check your phone.]")
         return efb_msg
 
+    def generate_card_info(self, msg: wxpy.Message) -> str:
+        gender = {1: self._("M"), 2: self._("F")}.get(msg.card.sex, msg.card.sex)
+        txt = (self._("Card: {user.nick_name}\n"
+                      "From: {user.province}, {user.city}\n"
+                      "Bio: {user.signature}\n"
+                      "Gender: {gender}"))
+        txt = txt.format(user=msg.card, gender=gender)
+        return txt
+
     @Decorators.wechat_msg_meta
-    def wechat_card_msg(self, msg: wxpy.Message) -> EFBMsg:
-        efb_msg = EFBMsg()
+    def wechat_card_msg(self, msg: wxpy.Message) -> Message:
         # TRANSLATORS: Gender of contact
-        gender = {1: self._("M"), 2: self._("F")}.get(msg.card.sex, msg.card.sex)
-        txt = (self._("Card: {user.nick_name}\n"
-                      "From: {user.province}, {user.city}\n"
-                      "Bio: {user.signature}\n"
-                      "Gender: {gender}"))
-        txt = txt.format(user=msg.card, gender=gender)
-        efb_msg.text = txt
-        efb_msg.type = MsgType.Text
-        efb_msg.commands = EFBMsgCommands([
-            EFBMsgCommand(
-                name=self._("Send friend request"),
-                callable_name="add_friend",
-                kwargs={"username": msg.card.user_name}
-            )
-        ])
-        return efb_msg
+        txt = self.generate_card_info(msg)
+        return Message(
+            text=txt,
+            type=MsgType.Text,
+            commands=MessageCommands([
+                MessageCommand(
+                    name=self._("Send friend request"),
+                    callable_name="add_friend",
+                    kwargs={"username": msg.card.user_name}
+                )
+            ])
+        )
 
     @Decorators.wechat_msg_meta
-    def wechat_friend_msg(self, msg: wxpy.Message) -> EFBMsg:
-        efb_msg = EFBMsg()
-        gender = {1: self._("M"), 2: self._("F")}.get(msg.card.sex, msg.card.sex)
-        txt = (self._("Card: {user.nick_name}\n"
-                      "From: {user.province}, {user.city}\n"
-                      "Bio: {user.signature}\n"
-                      "Gender: {gender}"))
-        txt = txt.format(user=msg.card, gender=gender)
-        efb_msg.text = txt
-        efb_msg.type = MsgType.Text
-        efb_msg.commands = EFBMsgCommands([
-            EFBMsgCommand(
-                name=self._("Accept friend request"),
-                callable_name="accept_friend",
-                kwargs={"username": msg.card.user_name}
-            )
-        ])
-        return efb_msg
+    def wechat_friend_msg(self, msg: wxpy.Message) -> Message:
+        # TRANSLATORS: Gender of contact
+        txt = self.generate_card_info(msg)
+        return Message(
+            text=txt,
+            type=MsgType.Text,
+            commands=MessageCommands([
+                MessageCommand(
+                    name=self._("Accept friend request"),
+                    callable_name="accept_friend",
+                    kwargs={"username": msg.card.user_name}
+                )
+            ])
+        )
 
-    def save_file(self, msg: wxpy.Message, app_message: Optional[str] = None) -> Tuple[str, str, IO[bytes]]:
+    def save_file(self, msg: wxpy.Message, app_message: Optional[str] = None) -> Tuple[Path, str, BinaryIO]:
         """
         Args:
             msg: the WXPY message object
@@ -416,9 +520,9 @@ class SlaveMessageManager:
         Returns:
             File path, MIME, File
         """
-        file = tempfile.NamedTemporaryFile()
+        file: BinaryIO = tempfile.NamedTemporaryFile()  # type: ignore
         try:
-            if msg.type == consts.ATTACHMENT:
+            if msg.type in [consts.ATTACHMENT, consts.VIDEO]:
                 with self.file_download_mutex_lock:
                     msg.get_file(file.name)
             else:
@@ -448,4 +552,9 @@ class SlaveMessageManager:
         if isinstance(mime, bytes):
             mime = mime.decode()
         self.logger.debug("[%s] File downloaded: %s (%s)", msg.id, file.name, mime)
-        return file.name, mime, file
+        return Path(file.name), mime, file
+
+    @staticmethod
+    def get_node_text(root: Element, path: str, fallback: str) -> str:
+        node = root.find(path)
+        return getattr(node, 'text', fallback) or fallback

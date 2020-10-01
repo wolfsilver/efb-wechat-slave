@@ -6,11 +6,19 @@ EFB 微信从端
    :target: https://pypi.org/project/efb-wechat-slave/
    :alt: PyPI release
 
+.. image:: https://github.com/blueset/efb-wechat-slave/workflows/Tests/badge.svg
+   :target: https://github.com/blueset/efb-wechat-slave/actions
+   :alt: Tests status
+
+.. image:: https://pepy.tech/badge/efb-wechat-slave/month
+   :target: https://pepy.tech/project/efb-wechat-slave
+   :alt: Downloads per month
+
 .. image:: https://d322cqt584bo4o.cloudfront.net/ehforwarderbot/localized.svg
    :target: https://crowdin.com/project/ehforwarderbot/
    :alt: Translate this project
 
-.. image:: https://github.com/blueset/efb-wechat-slave/blob/master/banner.png
+.. image:: https://github.com/blueset/efb-wechat-slave/raw/master/banner.png
    :alt: Banner
 
 .. image:: https://i.imgur.com/dCZfh14.png
@@ -27,22 +35,26 @@ EWS 是兼容 EH Forwarder Bot 的微信从端，基于逆向工程的微信网�
 <https://github.com/littlecodersh/ItChat/>`_。
 
 
-Alpha 版本
+使用前阅读
 ==========
 
-该从端非稳定版本，且其功能随时可能会被更改。
+Since mid-2017, we have received feedback where some users’ access to
+Web WeChat was banned. Most of the users were unbanned within 1 day to
+3 months. When a user is banned for Web WeChat access, a pop up would
+be shown when they try to use it, stating that they “cannot use Web
+WeChat temporary”, and are recommended to use mobile app or
+Windows/macOS instead. By observation, only less than 10% of the users
+are being banned from Web WeChat during their usage.
 
-
-注意
-====
-
-自 2016
-年中旬以来，陆续有用户报告其微信网页版登录被腾讯封禁。表现为用任何方式登录微信网页版提示「当前登录环境异常。为了你的账号安全，暂时不能登录
-Web 微信。你可以通过手机客户端或 Windows 微信登录」或类似的提示。大部分用户会在封禁后三个月内解封，不同用户的解封耗时不同。
+Meanwhile, it is reported that WeChat accounts registered after
+mid-2017 cannot use Web WeChat “for security reason”. Please confirm
+that you can use `Web WeChat <https://web.wechat.com/>`_ with your
+account before setting up EWS.
 
 该封禁不影响其他客户端的登录。目前封禁的原因尚不明确。
 
-如果你对网页版登录有要求的话，请慎用此信道。详细的相关信息请参见项目 Wiki。
+请谨慎使用，如果您对微信网页版有着特殊需要，请慎用此信道。详细信息请参见 `issue #7
+<https://github.com/blueset/efb-wechat-slave/issues/7>`_ 。
 
 
 依赖
@@ -69,12 +81,12 @@ Web 微信。你可以通过手机客户端或 Windows 微信登录」或类似�
     ::
        pip3 install efb-wechat-slave
 
-3. 在当前配置档案（Profile）的 ``config.yaml`` 中启用 EWS。
+3. 使用 *EFB 配置向导* 或当前配置档案的 ``config.yaml`` 启用 EWS。
 
     当前配置文件夹的位置会根据用户的设定而改变。
 
-    **(EFB 2.0.0a1 中，默认的配置文件夹位于**
-    ``~/.ehforwarderbot/profiles/default`` **)**
+    **(在 EFB 2 中，默认的配置文件夹位于** ``~/.ehforwarderbot/profiles/default``
+    **）**
 
 
 其他安装方式
@@ -87,7 +99,7 @@ Web 微信。你可以通过手机客户端或 Windows 微信登录」或类似�
   (``python-efb-telegram-master-git``)
 
 * 其他\ `安装脚本和容器（Docker 等）
-  <https://github.com/blueset/ehForwarderBot/wiki/Channels-Repository#scripts-and-containers-eg-docker>`_
+  <https://efb-modules.1a23.studio#scripts-and-containers-eg-docker>`_
 
 
 可选配置
@@ -202,18 +214,27 @@ EWS 支持使用可选的配置文件来启用实验功能。配置文件存储�
 * ``send_image_as_file`` *(bool)* [默认：``false``]
 
   以 JPEG 图片方式发送自定义表情和 GIF，用于临时绕过微信网页版的自定义表情限制。详见 `#48
-  <https://github.com/blueset/efb-wechat-slave/issues/48>`_。
+  <https://ews.1a23.studio/issues/48>`_。
 
 * ``system_chats_to_include`` *(list of str)** [默认: ``[filehelper]``]
 
   在默认会话列表中显示的特殊系统会话。其内容仅能为
   ``filehelper``（文件传输助手）、``fmessage``（朋友推荐消息）、``newsapp``（腾讯新闻）、``weixin``（微信团队）其中零到四个选项。
 
+* ``user_agent`` *(str)* [默认值: ``null``]
+
+  指定访问网页版微信时使用的用户代理（user agent）字符串。不指定时则使用 ``itchat`` 提供的默认值。
+
+* ``text_post_processing`` *(bool)* [Default: ``true``]
+
+  Determine whether to post-process text of messages received from
+  WeChat.
+
 
 供应商特定选项（``vendor_specific``）
 =====================================
 
-EWS 的 ``EFBChat`` 提供了以下的 ``vendor_specific`` 项目：
+EWS 中的 ``Chat`` 提供了以下 ``vendor_specific`` 数据：
 
 * ``is_mp`` *(bool)* 该会话是否为公众号。
 
@@ -248,8 +269,8 @@ EWS 使用了 `GNU Affero General Public License 3.0
 
 ::
 
-   EFB WeChat Slave Channel: An slave channel for EH Forwarder Bot.
-   Copyright (C) 2016 - 2019 Eana Hufwe, and the EFB WeChat Slave Channel contributors
+   EFB WeChat Slave Channel: A slave channel for EH Forwarder Bot.
+   Copyright (C) 2016 - 2020 Eana Hufwe, and the EFB WeChat Slave Channel contributors
    All rights reserved.
 
    This program is free software: you can redistribute it and/or modify

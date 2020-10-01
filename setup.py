@@ -8,6 +8,7 @@ __version__ = ""
 exec(open('efb_wechat_slave/__version__.py').read())
 
 long_description = open('README.rst').read()
+tests_require = ["pytest", "mypy"]
 
 setup(
     name='efb-wechat-slave',
@@ -18,7 +19,7 @@ setup(
     include_package_data=True,
     author='Eana Hufwe',
     author_email='ilove@1a23.com',
-    url='https://github.com/blueset/efb-wechat-slave',
+    url='https://ews.1a23.studio',
     license='AGPLv3+',
     python_requires='>=3.6',
     keywords=['ehforwarderbot', 'EH Forwarder Bot', 'EH Forwarder Bot Slave Channel',
@@ -35,18 +36,21 @@ setup(
         "Topic :: Utilities"
     ],
     install_requires=[
-        "ehforwarderbot>=2.0.0b18",
+        "ehforwarderbot>=2.0.0",
         "itchat>=1.3.10",
         "python-magic",
         "pillow",
         "pyqrcode",
-        "xmltodict",
-        "PyYaml",
+        "PyYaml>=5.3",
         "requests>=2.22.0",
         "typing_extensions",
         "bullet",
         "cjkwrap"
     ],
+    extras_require={
+        'tests': tests_require
+    },
+    tests_require=tests_require,
     entry_points={
         'ehforwarderbot.slave': 'blueset.wechat = efb_wechat_slave:WeChatChannel',
         'ehforwarderbot.wizard': 'blueset.wechat = efb_wechat_slave.wizard:wizard'

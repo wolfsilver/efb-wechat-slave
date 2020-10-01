@@ -6,7 +6,7 @@
 * 请查阅 EFB 说明文档及本项目说明是否已针对您的问题进行说明。
 
 提问的智慧: https://github.com/FredWe/How-To-Ask-Questions-The-Smart-Way/blob/master/README-zh_CN.md
-EFB 项目贡献指南: https://github.com/blueset/ehForwarderBot/blob/master/CONTRIBUTING.md
+EFB 项目贡献指南: https://efb.1a23.studio/blob/master/CONTRIBUTING.md
 EFB 说明文档: https://ehforwarderbot.readthedocs.io/
 
 Bug 汇报需要包含完整的重现步骤与 Verbose 级别的日志。日志获取
@@ -36,10 +36,10 @@ Bug 汇报需要包含完整的重现步骤与 Verbose 级别的日志。日志�
 <summary>Verbose 日志</summary>
 
 ```
-请在这里贴出您的 Verbose 日志。如果您对隐私有所顾虑，您可以自行
+请在下方贴出您的 Verbose 日志。如果您对隐私有所顾虑，您可以自行
 隐去隐私信息、或 GPG 加密至 BD6B65EC00638DC9083781D5D4B65BB1A106200A。
 
-
+【贴在这里】
 
 ```
  
