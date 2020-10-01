@@ -4,12 +4,12 @@ from __future__ import unicode_literals
 import atexit
 import os
 import pickle
+import secrets
 import logging
 import logging.handlers
 
 import threading
 from typing import Optional, TYPE_CHECKING, Tuple
-from typing_extensions import Final
 from collections import UserDict
 
 if TYPE_CHECKING:
@@ -231,8 +231,18 @@ class PuidMap(object):
         """
         保存映射数据
         """
-        with open(self.path, 'wb') as fp:
-            pickle.dump((self.user_names, self.wxids, self.remark_names, self.captions), fp)
+
+        # Safe dump
+        data = (self.user_names, self.wxids, self.remark_names, self.captions)
+        if not os.path.exists(self.path):
+            with open(self.path, "wb") as f:
+                pickle.dump(data, f)
+        else:
+            temp_path = f"{self.path}.{secrets.token_urlsafe(8)}"
+            with open(temp_path, "wb") as f:
+                pickle.dump(data, f)
+            os.unlink(self.path)
+            os.rename(temp_path, self.path)
 
         if self._dump_task:
             self._dump_task = None
@@ -283,6 +293,7 @@ class PuidMap(object):
                         self.log("Potential common attribute match: %s -> %s", old, new)
                     return False
             return True
+        return False
 
     @staticmethod
     def merge_captions(old: Optional[Caption], new: Caption) -> Caption:
@@ -290,7 +301,7 @@ class PuidMap(object):
         if not old:
             return new
         else:
-            cap: Caption = tuple(new[i] or old[i] for i in range(4))
+            cap: Caption = (new[0] or old[0], new[1] or old[1], new[2] or old[2], new[3] or old[3])
             return cap
 
 

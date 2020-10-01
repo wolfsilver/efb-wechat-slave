@@ -6,17 +6,25 @@ EFB WeChat Slave Channel
    :target: https://pypi.org/project/efb-wechat-slave/
    :alt: PyPI release
 
+.. image:: https://github.com/blueset/efb-wechat-slave/workflows/Tests/badge.svg
+   :target: https://github.com/blueset/efb-wechat-slave/actions
+   :alt: Tests status
+
+.. image:: https://pepy.tech/badge/efb-wechat-slave/month
+   :target: https://pepy.tech/project/efb-wechat-slave
+   :alt: Downloads per month
+
 .. image:: https://d322cqt584bo4o.cloudfront.net/ehforwarderbot/localized.svg
    :target: https://crowdin.com/project/ehforwarderbot/
    :alt: Translate this project
 
-.. image:: https://github.com/blueset/efb-wechat-slave/blob/master/banner.png
+.. image:: https://github.com/blueset/efb-wechat-slave/raw/master/banner.png
    :alt: Banner
 
 .. image:: https://i.imgur.com/dCZfh14.png
    :alt: This project proudly supports #SayNoToWeChat campaign.
 
-`README in other languages <.>`_.
+`他の言語でREADMEを読む <.>`_
 
 **Channel ID**: ``blueset.wechat``
 
@@ -28,28 +36,28 @@ Some source code in this repository was adapted from \ `youfou/wxpy
 <https://github.com/littlecodersh/ItChat/>`_.
 
 
-Alpha Version
-=============
+Read before use
+===============
 
-This is an unstable alpha version, and its functionality may change at
-any time.
+Since mid-2017, we have received feedback where some users’ access to
+Web WeChat was banned. Most of the users were unbanned within 1 day to
+3 months. When a user is banned for Web WeChat access, a pop up would
+be shown when they try to use it, stating that they “cannot use Web
+WeChat temporary”, and are recommended to use mobile app or
+Windows/macOS instead. By observation, only less than 10% of the users
+are being banned from Web WeChat during their usage.
 
-
-Attention
-=========
-
-Since mid-2016, we have received feedback where some users』 access to
-Web WeChat was banned. Most of the users were unbanned within 1 week
-to 3 months. When a user is banned for Web WeChat access, a pop up
-would be shown when they try to use it, stating that they 「cannot use
-Web WeChat temporary」, and are recommended to 「use mobile app or
-Windows/macOS instead」.
+Meanwhile, it is reported that WeChat accounts registered after
+mid-2017 cannot use Web WeChat “for security reason”. Please confirm
+that you can use `Web WeChat <https://web.wechat.com/>`_ with your
+account before setting up EWS.
 
 The ban will NOT affect your access to any other client. The cause of
 such ban is not clear.
 
 Please proceed with caution, and avoid using this Channel if you have
-special need of Web WeChat access. Learn more in the Project Wiki.
+special need of Web WeChat access. More details are available in
+`issue #7 <https://github.com/blueset/efb-wechat-slave/issues/7>`_.
 
 
 Dependencies
@@ -71,16 +79,17 @@ Install and Enable
 
 1. Install all binary dependencies stated above
 
-2. Install
+2. インストール
 
     ::
        pip3 install efb-wechat-slave
 
-3. Enable EWS in ``config.yaml`` of the current profile.
+3. Enable EWS using the *EFB configuration wizard* or in
+    ``config.yaml`` of the current profile.
 
     The config directory may vary based on your settings.
 
-    **(In EFB 2.0.0a1, the default configuration directory is**
+    **(In EFB 2, the default configuration directory is**
     ``~/.ehforwarderbot/profiles/default`` **)**
 
 
@@ -96,7 +105,7 @@ community, including:
   (``python-efb-telegram-master-git``)
 
 * Other `installation scripts and containers (e.g. Docker)
-  <https://github.com/blueset/ehForwarderBot/wiki/Channels-Repository#scripts-and-containers-eg-docker>`_
+  <https://efb-modules.1a23.studio#scripts-and-containers-eg-docker>`_
 
 
 Optional configuration
@@ -237,8 +246,7 @@ disappear at any time. Use at your own risk.
 
   Send stickers and GIF images as JPEG to bypass Web WeChat custom
   sticker limits as a workaround. See `#48
-  <https://github.com/blueset/efb-wechat-slave/issues/48>`_ for
-  details.
+  <https://ews.1a23.studio/issues/48>`_ for details.
 
 * ``system_chats_to_include`` *(list of str)** [Default:
   ``[filehelper]``]
@@ -248,11 +256,21 @@ disappear at any time. Use at your own risk.
   ``fmessage`` (Friend suggestions), ``newsapp`` (Tencent News) and,
   ``weixin`` (WeChat Team).
 
+* ``user_agent`` *(str)* [Default: ``null``]
+
+  Choose the User Agent string to use when accessing Web Wechat. Leave
+  undefined to use the default value provided by ``itchat``.
+
+* ``text_post_processing`` *(bool)* [Default: ``true``]
+
+  Determine whether to post-process text of messages received from
+  WeChat.
+
 
 ``vendor_specific``
 ===================
 
-``EFBChat`` from EWS provides the following ``vendor_specific`` items:
+``Chat`` from EWS provides the following ``vendor_specific`` items:
 
 * ``is_mp`` *(bool)* If the chat is an 「Official Account」.
 
@@ -289,8 +307,8 @@ EWS is licensed under `GNU Affero General Public License 3.0
 
 ::
 
-   EFB WeChat Slave Channel: An slave channel for EH Forwarder Bot.
-   Copyright (C) 2016 - 2019 Eana Hufwe, and the EFB WeChat Slave Channel contributors
+   EFB WeChat Slave Channel: A slave channel for EH Forwarder Bot.
+   Copyright (C) 2016 - 2020 Eana Hufwe, and the EFB WeChat Slave Channel contributors
    All rights reserved.
 
    This program is free software: you can redistribute it and/or modify

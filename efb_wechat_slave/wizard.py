@@ -7,6 +7,7 @@ from pkg_resources import resource_filename
 from ruamel.yaml import YAML
 
 from ehforwarderbot import coordinator, utils
+from ehforwarderbot.types import ModuleID
 from . import WeChatChannel
 
 
@@ -33,7 +34,7 @@ class DataModel:
         self.instance_id = instance_id
         self.channel_id = WeChatChannel.channel_id
         if instance_id:
-            self.channel_id += "#" + instance_id
+            self.channel_id = ModuleID(self.channel_id + "#" + instance_id)
         self.config_path = utils.get_config_path(self.channel_id)
         self.yaml = YAML()
         if not self.config_path.exists():
@@ -42,8 +43,8 @@ class DataModel:
             self.data = self.yaml.load(self.config_path.open())
 
     def build_default_config(self):
-        # TRANSLATORS: This part of text must be formatted in a monospaced font and no line shall exceed the width of a 70-cell-wide terminal.
         s = _(
+            # TRANSLATORS: This part of text must be formatted in a monospaced font and no line shall exceed the width of a 70-cell-wide terminal.
             "# ===========================================\n"
             "# EFB WeChat Slave Channel Configuration File\n"
             "# ===========================================\n"
@@ -64,7 +65,6 @@ class DataModel:
 
 
 flags_settings = {
-
     "refresh_friends":
         (False, 'bool', None,
          _('Force refresh the entire chat list every time when queried.'
@@ -90,7 +90,7 @@ flags_settings = {
            '        Note: QR code might change frequently.'
            )),
     "on_log_out":
-        ("command", 'choices', ['idle', 'reauth', 'command'],
+        ("idle", 'choices', ['idle', 'reauth', 'command'],
          _('Behavior when WeChat server logged your account out.\n'
            '\n'
            'Options:\n'
@@ -110,7 +110,7 @@ flags_settings = {
            'disabled by default.'
            )),
     "app_shared_link_mode":
-        ('ignore', 'choices', ['ignore', 'upload', 'image'],
+        ("ignore", 'choices', ['ignore', 'upload', 'image'],
          _('Behavior to deal with thumbnails when a message shared by 3rd '
            'party apps is received.\n'
            '\n'
@@ -132,7 +132,7 @@ flags_settings = {
            'sticker limits as a workaround.'
            )),
     "system_chats_to_include":
-        (['filehelper'], 'multiple', ['filehelper', 'fmessage', 'newsapp', 'weixin'],
+        (["filehelper"], 'multiple', ['filehelper', 'fmessage', 'newsapp', 'weixin'],
          _(
              'List of system chats to show in the default chat list. '
              'It must be zero to four of the following: filehelper '
@@ -144,6 +144,11 @@ flags_settings = {
          _('Choose the User Agent string to use when accessing Web Wechat. '
            'Leave undefined to use the default value provided by itchat.'
            )),
+    "text_post_processing":
+        (True, 'bool', None,
+         _('Determine whether to post-process text of messages received from '
+           'WeChat.'
+           )),
 }
 
 
@@ -153,7 +158,7 @@ def setup_experimental_flags(data):
         "a QR code when you start up EH Forwarder Bot. It’s as simple as "
         "that.\n"
         "\n"
-        "We has provided some experimental features that you can use. "
+        "We have provided some experimental features that you can use. "
         "They are not required to be enabled for EWS to work. If you do not "
         "want to enable these feature, just press ENTER, and you are good to go."
     ))
@@ -178,18 +183,30 @@ def setup_experimental_flags(data):
 
             data.data['flags'][key] = ans
         elif cat == 'int':
-            ans = Numbers(prompt=f"{key} [{default}]? ") \
+            ans = Numbers(prompt=f"{key} [{default}]? ", type=int) \
                 .launch(default=default)
             data.data['flags'][key] = ans
         elif cat == 'choices':
+            try:
+                assert isinstance(params, list)
+                default = params.index(default)
+            except ValueError:
+                default = 0
             ans = Bullet(prompt=f"{key}?", choices=params) \
                 .launch(default=default)
             data.data['flags'][key] = ans
         elif cat == 'multiple':
+            default_idx = []
+            assert isinstance(params, list)
+            for i in default:
+                try:
+                    default_idx.append(params.index(i))
+                except ValueError:
+                    pass
             ans = Check(
                 prompt=f"{key}?",
                 choices=params
-            ).launch(default=default)
+            ).launch(default=default_idx)
             data.data['flags'][key] = ans
         elif cat == 'str':
             ans = input(f"{key} [{default}]: ")

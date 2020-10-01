@@ -1,34 +1,39 @@
 # coding: utf-8
+import base64
+import io
+import os
+import json
+from typing import Dict, Any, TYPE_CHECKING, List
 
-from typing import Dict, Any, TYPE_CHECKING
-
+from ehforwarderbot.types import MessageID
 from .vendor.itchat import utils as itchat_utils
 
 from .vendor import wxpy
+
 if TYPE_CHECKING:
     from . import WeChatChannel
 
 WC_EMOTICON_CONVERSION = {
-    '[微笑]': '😃',    '[Smile]': '😃',
-    '[撇嘴]': '😖',    '[Grimace]': '😖',
-    '[色]': '😍',      '[Drool]': '😍',
-    '[发呆]': '😳',    '[Scowl]': '😳',
-    '[得意]': '😎',    '[Chill]': '😎',
-    '[流泪]': '😭',    '[Sob]': '😭',
-    '[害羞]': '☺️',    '[Shy]': '☺️',
-    '[闭嘴]': '🤐',    '[Shutup]': '🤐',
-    '[睡]': '😴',      '[Sleep]': '😴',
-    '[大哭]': '😣',    '[Cry]': '😣',
-    '[尴尬]': '😰',    '[Awkward]': '😰',
-    '[发怒]': '😡',    '[Pout]': '😡',
-    '[调皮]': '😜',    '[Wink]': '😜',
-    '[呲牙]': '😁',    '[Grin]': '😁',
-    '[惊讶]': '😱',    '[Surprised]': '😱',
-    '[难过]': '🙁',    '[Frown]': '🙁',
-    '[囧]': '☺️',      '[Tension]': '☺️',
-    '[抓狂]': '😫',    '[Scream]': '😫',
-    '[吐]': '🤢',      '[Puke]': '🤢',
-    '[偷笑]': '😅',    '[Chuckle]': '😅',
+    '[微笑]': '😃', '[Smile]': '😃',
+    '[撇嘴]': '😖', '[Grimace]': '😖',
+    '[色]': '😍', '[Drool]': '😍',
+    '[发呆]': '😳', '[Scowl]': '😳',
+    '[得意]': '😎', '[Chill]': '😎',
+    '[流泪]': '😭', '[Sob]': '😭',
+    '[害羞]': '☺️', '[Shy]': '☺️',
+    '[闭嘴]': '🤐', '[Shutup]': '🤐',
+    '[睡]': '😴', '[Sleep]': '😴',
+    '[大哭]': '😣', '[Cry]': '😣',
+    '[尴尬]': '😰', '[Awkward]': '😰',
+    '[发怒]': '😡', '[Pout]': '😡',
+    '[调皮]': '😜', '[Wink]': '😜',
+    '[呲牙]': '😁', '[Grin]': '😁',
+    '[惊讶]': '😱', '[Surprised]': '😱',
+    '[难过]': '🙁', '[Frown]': '🙁',
+    '[囧]': '☺️', '[Tension]': '☺️',
+    '[抓狂]': '😫', '[Scream]': '😫',
+    '[吐]': '🤢', '[Puke]': '🤢',
+    '[偷笑]': '🙈', '[Chuckle]': '🙈',
     '[愉快]': '☺️', '[Joyful]': '☺️',
     '[白眼]': '🙄', '[Slight]': '🙄',
     '[傲慢]': '😕', '[Smug]': '😕',
@@ -93,13 +98,24 @@ WC_EMOTICON_CONVERSION = {
     '[机智]': '🤓', '[Smart]': '🤓',
     '[皱眉]': '😟', '[Concerned]': '😟',
     '[耶]': '✌️', '[Yeah!]': '✌️',
-    '[红包]': '💰', '[Packet]': '💰',
+    '[红包]': '🧧', '[Packet]': '🧧',
     '[鸡]': '🐥', '[Chick]': '🐥',
     '[蜡烛]': '🕯️', '[Candle]': '🕯️',
     '[糗大了]': '😥',
     '[Thumbs Up]': '👍', '[Pleased]': '😊',
     '[Rich]': '🀅',
     '[Pup]': '🐶',
+    '[吃瓜]': '🙄\u200d🍉',
+    '[加油]': '💪\u200d😁',
+    '[加油加油]': '💪\u200d😷',
+    '[汗]': '😓',
+    '[天啊]': '😱',
+    '[Emm]': '🤔',
+    '[社会社会]': '😏',
+    '[旺柴]': '🐶\u200d😏',
+    '[好的]': '😏\u200d👌',
+    '[哇]': '🤩',
+    '[打脸]': '😟\u200d🤚',
 }
 
 
@@ -116,7 +132,8 @@ class ExperimentalFlagsManager:
         'puid_logs': None,
         'send_stickers_and_gif_as_jpeg': False,
         'system_chats_to_include': ['filehelper'],
-        'user_agent': None
+        'user_agent': None,
+        'text_post_processing': True,
     }
 
     def __init__(self, channel: 'WeChatChannel'):
@@ -148,25 +165,53 @@ def wechat_string_unescape(content: str) -> str:
     return d['Content']
 
 
-def generate_message_uid(message: wxpy.SentMessage) -> str:
-    return "%s %s %s" % (message.chat.puid,
-                         message.id,
-                         message.local_id)
+def generate_message_uid(messages: List[wxpy.SentMessage]) -> MessageID:
+    return MessageID(json.dumps(
+        [[message.chat.puid, message.id, message.local_id]
+         for message in messages]
+    ))
 
 
-def message_to_dummy_message(message_uid: str, channel: 'WeChatChannel') -> wxpy.SentMessage:
+def message_id_to_dummy_message(message_uid: List[str], channel: 'WeChatChannel') -> wxpy.SentMessage:
     """
     Generate a wxpy.SentMessage object with minimum identifying information.
     This is generally used to recall messages using WXPY's API without the message object
 
     Args:
-        message_uid: puid, id, local_id joined by space
+        message_uid: puid, id, local_id
         channel: the slave channel object that issued this message
     """
-    puid, m_id, l_id = message_uid.split(' ', 2)
+    puid, m_id, l_id = message_uid
     d = {
         'receiver': channel.chats.get_wxpy_chat_by_uid(puid),
         'id': m_id,
         'local_id': l_id
     }
     return wxpy.SentMessage(d)
+
+
+def imgcat(file: io.BytesIO, filename: str) -> str:
+    """
+    Form a string to print in iTerm 2's ``imgcat`` format
+    from a filename and a image file
+    """
+
+    def print_osc():
+        if str(os.environ.get("TERM", "")).startswith("screen"):
+            return "\x1bPtmux;\x1b\x1b]"
+        else:
+            return "\x1b]"
+
+    def print_st():
+        if str(os.environ.get("TERM", "")).startswith("screen"):
+            return "\x07\x1b\\"
+        else:
+            return "\x07"
+
+    res = print_osc()
+    res += "1337;File=name="
+    res += base64.b64encode(filename.encode()).decode()
+    res += ";inline=1:"
+    res += base64.b64encode(file.getvalue()).decode()
+    res += print_st()
+    return res

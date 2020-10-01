@@ -1,9 +1,6 @@
 import logging, traceback, sys, threading
 
-try:
-    import Queue
-except ImportError:
-    import queue as Queue
+import queue
 
 from ..log import set_logging
 from ..utils import test_connect
@@ -49,7 +46,7 @@ def configured_reply(self):
     """
     try:
         msg = self.msgList.get(timeout=1)
-    except Queue.Empty:
+    except queue.Empty:
         pass
     else:
         if isinstance(msg['User'], templates.User):
@@ -109,6 +106,6 @@ def run(self, debug=False, blockThread=True):
     if blockThread:
         reply_fn()
     else:
-        replyThread = threading.Thread(target=reply_fn)
+        replyThread = threading.Thread(target=reply_fn, name="itchat message listener thread (reply_fn)")
         replyThread.setDaemon(True)
         replyThread.start()

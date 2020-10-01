@@ -1,15 +1,18 @@
-import os, time, re, io
+import hashlib
+import io
 import json
-import mimetypes, hashlib
 import logging
+import mimetypes
+import os
+import re
+import time
+from urllib.parse import quote
 from collections import OrderedDict
 
-import requests
-
+from .contact import update_local_uin
 from .. import config, utils
 from ..returnvalues import ReturnValue
 from ..storage import templates
-from .contact import update_local_uin
 
 logger = logging.getLogger('itchat')
 
@@ -26,11 +29,12 @@ def load_messages(core):
 
 
 def get_download_fn(core, url, msgId):
+    params = {
+        'msgid': msgId,
+        'skey': core.loginInfo['skey'], }
+    headers = {'User-Agent': core.user_agent}
+
     def download_fn(downloadDir=None):
-        params = {
-            'msgid': msgId,
-            'skey': core.loginInfo['skey'], }
-        headers = {'User-Agent': core.user_agent}
         r = core.s.get(url, params=params, stream=True, headers=headers)
         tempStorage = io.BytesIO()
         for block in r.iter_content(1024):
@@ -46,6 +50,22 @@ def get_download_fn(core, url, msgId):
             'PostFix': utils.get_image_postfix(tempStorage.read(20)), })
 
     return download_fn
+
+
+def get_attachment_download_fn(core, url, params, headers):
+    def download_atta(attaDir=None):
+        r = core.s.get(url, params=params, stream=True, headers=headers)
+        tempStorage = io.BytesIO()
+        for block in r.iter_content(1024):
+            tempStorage.write(block)
+        if attaDir is None:
+            return tempStorage.getvalue()
+        with open(attaDir, 'wb') as f:
+            f.write(tempStorage.getvalue())
+        return ReturnValue({'BaseResponse': {
+            'ErrMsg': 'Successfully downloaded',
+            'Ret': 0, }})
+    return download_atta
 
 
 def produce_msg(core, msgList):
@@ -124,23 +144,13 @@ def produce_msg(core, msgList):
         elif m['MsgType'] in (43, 62):  # tiny video
             msgId = m['MsgId']
 
-            def download_video(videoDir=None):
-                url = '%s/webwxgetvideo' % core.loginInfo['url']
-                params = {
-                    'msgid': msgId,
-                    'skey': core.loginInfo['skey'], }
-                headers = {'Range': 'bytes=0-', 'User-Agent': core.user_agent}
-                r = core.s.get(url, params=params, headers=headers, stream=True)
-                tempStorage = io.BytesIO()
-                for block in r.iter_content(1024):
-                    tempStorage.write(block)
-                if videoDir is None:
-                    return tempStorage.getvalue()
-                with open(videoDir, 'wb') as f:
-                    f.write(tempStorage.getvalue())
-                return ReturnValue({'BaseResponse': {
-                    'ErrMsg': 'Successfully downloaded',
-                    'Ret': 0, }})
+            url = '%s/webwxgetvideo' % core.loginInfo['url']
+            params = {
+                'msgid': msgId,
+                'skey': core.loginInfo['skey'], }
+            headers = {'Range': 'bytes=0-', 'User-Agent': core.user_agent}
+
+            download_video = get_attachment_download_fn(core, url, params, headers)
 
             msg = {
                 'Type': 'Video',
@@ -164,18 +174,7 @@ def produce_msg(core, msgList):
                     'webwx_data_ticket': cookiesList['webwx_data_ticket'], }
                 headers = {'User-Agent': core.user_agent}
 
-                def download_atta(attaDir=None):
-                    r = core.s.get(url, params=params, stream=True, headers=headers)
-                    tempStorage = io.BytesIO()
-                    for block in r.iter_content(1024):
-                        tempStorage.write(block)
-                    if attaDir is None:
-                        return tempStorage.getvalue()
-                    with open(attaDir, 'wb') as f:
-                        f.write(tempStorage.getvalue())
-                    return ReturnValue({'BaseResponse': {
-                        'ErrMsg': 'Successfully downloaded',
-                        'Ret': 0, }})
+                download_atta = get_attachment_download_fn(core, url, params, headers)
 
                 msg = {
                     'Type': 'Attachment',
@@ -372,9 +371,9 @@ def upload_chunk_file(core, fileDir, fileSymbol, fileSize,
         ('uploadmediarequest', (None, uploadMediaRequest)),
         ('webwx_data_ticket', (None, cookiesList['webwx_data_ticket'])),
         ('pass_ticket', (None, core.loginInfo['pass_ticket'])),
-        ('filename', (utils.quote(fileName), file_.read(524288), 'application/octet-stream'))])
+        ('filename', (quote(fileName), file_.read(524288), 'application/octet-stream'))])
     if chunks == 1:
-        del files['chunk'];
+        del files['chunk']
         del files['chunks']
     else:
         files['chunk'], files['chunks'] = (None, str(chunk)), (None, str(chunks))

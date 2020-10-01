@@ -2,51 +2,58 @@ EFB WeChat Slave Channel：EFB 微信从端 (EWS)
 ============================================
 
 .. image:: https://img.shields.io/pypi/v/efb-wechat-slave.svg
-   :alt: PyPI release
+   :alt: PyPI 发布
    :target: https://pypi.org/project/efb-wechat-slave/
+.. image:: https://github.com/blueset/efb-wechat-slave/workflows/Tests/badge.svg
+   :alt: 测试状态
+   :target: https://github.com/blueset/efb-wechat-slave/actions
+.. image:: https://pepy.tech/badge/efb-wechat-slave/month
+   :alt: 每月下载量
+   :target: https://pepy.tech/project/efb-wechat-slave
 .. image:: https://d322cqt584bo4o.cloudfront.net/ehforwarderbot/localized.svg
    :alt: Translate this project
    :target: https://crowdin.com/project/ehforwarderbot/
 
-.. image:: https://github.com/blueset/efb-wechat-slave/blob/master/banner.png
-   :alt: Banner
+.. image:: https://github.com/blueset/efb-wechat-slave/raw/master/banner.png
+   :alt: 头图
 
 .. image:: https://i.imgur.com/dCZfh14.png
    :alt: This project proudly supports #SayNoToWeChat campaign.
 
 `README in other languages`_.
 
-.. _README in other languages: ./readme_translations
-
 .. TRANSLATORS: change the URL on previous line as "." (without quotations).
+.. _README in other languages: ./readme_translations
 
 **Channel ID**: ``blueset.wechat``
 
-EWS 是兼容 EH Forwarder Bot 的微信从端，基于逆向工程的微信网页版、\
-修改版 ``wxpy`` 和 ``ItChat``\ 。
+EWS 是兼容 EH Forwarder Bot 的微信从端，基于逆向工程的微信网页版、\
+修改版 ``wxpy``\  和 \ ``ItChat``\ 。
 
-本项目的部分代码修改自
-`youfou/wxpy`_\ 、\ `littlecodersh/ItChat`_\ 。
+本项目的部分代码修改自 `youfou/wxpy`_\ 、\ `littlecodersh/ItChat`_\ 。
 
 .. _youfou/wxpy: https://github.com/youfou/wxpy
 .. _littlecodersh/ItChat:  https://github.com/littlecodersh/ItChat/
-
-Alpha 版本
-----------
-
-本项目目前仍是 Alpha 版本，仍不稳定，且功能可能随时变更。
 
 
 使用前须知
 ----------
 
-自 2016 年中旬以来，陆续有用户报告其微信网页版登录被腾讯封禁。\
+自 2017 年中旬以来，陆续有用户报告其微信网页版登录被腾讯封禁。\
 表现为用任何方式登录微信网页版提示「当前登录环境异常。为了你的账号安全，\
-暂时不能登录 Web 微信。你可以通过手机客户端或 Windows 微信登录」\
-或类似的提示。大部分用户会在封禁后三个月内解封，不同用户的解封耗时不同。\
-该封禁不影响其他客户端的登录。目前封禁的原因尚不明确。
+暂时不能登录 Web 微信。你可以通过手机客户端或 Windows 微信登录」\
+或类似的提示。大部分用户会在封禁后一天到三个月内解封，不同用户的解封耗时不同。\
+据观测，仅有约不足一成的用户在使用过程中被封禁。该封禁不影响其他客户端的登录。\
+目前封禁的原因尚不明确。
 
-如果你对网页版登录有要求的话，请慎用此信道。详细的相关信息请参见项目 Wiki。
+与此同时，有现象表明 2017 年中旬以来新注册的微信用户不能够使用微信网页版。\
+在初次使用之前，请先访问\ `微信网页版`_\ 并确认您可以正常使用此功能。\
+若您的账号不能使用该功能，请尝试换用其他账号尝试。
+
+如果你对网页版登录有要求的话，请慎用此信道。详细的相关信息请参见 `issue #7`_\ 。
+
+.. _微信网页版: https://web.wechat.com/
+.. _issue #7: https://github.com/blueset/efb-wechat-slave/issues/7
 
 软件依赖
 --------
@@ -67,31 +74,31 @@ Alpha 版本
 
        pip3 install efb-wechat-slave
 
-3. 在当前配置文件夹 (Profile) 的 ``config.yaml`` 中启用 EWS。
+3. 使用 \ *EFB 配置向导*\ ，或在当前配置档案（Profile）目录的 \ ``config.yaml``\  文件中启用 EWS。
 
    当前配置文件夹的位置会根据用户的设定而改变。
 
-   **(EFB 2.0.0a1 中，默认的配置文件夹位于**
-   ``~/.ehforwarderbot/profiles/default`` **)**
+   **(EFB 2 中，默认的配置档案目录位于** 
+   ``~/.ehforwarderbot/profiles/default``\  **)**
 
 
 其他的安装方式
 ~~~~~~~~~~~~~~
 
-EWS 同时存在由社区提供的其他安装方式，包括：
+EWS 同时存在由社区提供的其他安装方式，包括：
 
-- 由 KeLiu_ 维护的 `AUR 软件包`_\ （``python-efb-wechat-slave-git``）。
-- 其他\ `安装脚本或 Docker 等容器`_\ 。
+- 由 KeLiu_ 维护的 `AUR 软件包`_\ （``python-efb-wechat-slave-git``）。
+- 其他\ `安装脚本或 Docker 等容器`_\ 。
 
 .. _KeLiu: https://github.com/specter119
-.. _AUR 软件包: https://aur.archlinux.org/packages/python-efb-wechat-slave-git
-.. _安装脚本或 Docker 等容器: https://github.com/blueset/ehForwarderBot/wiki/Channels-Repository#scripts-and-containers-eg-docker
+.. _AUR 软件包: https://aur.archlinux.org/packages/python-efb-wechat-slave-git
+.. _安装脚本或 Docker 等容器: https://efb-modules.1a23.studio#scripts-and-containers-eg-docker
 
 
 可选的配置文件
 --------------
 
-EWS 支持使用可选的配置文件来启用实验功能。配置文件存储于
+EWS 支持使用可选的配置文件来启用实验功能。配置文件存储于
 ``<当前配置文件夹>/blueset.wechat/config.yaml``\ 。
 
 配置文件例
@@ -113,11 +120,11 @@ EWS 支持使用可选的配置文件来启用实验功能。配置文件存储�
 -  **如何切换已登录的微信账号？**
    请登出当前的账号，并使用其他的微信手机登录。
 -  **如何登录两个微信账号？**
-   请在 EFB 配置文件中指定不同的实例 ID。
--  **EWS 稳定吗？**
-   EWS 依赖于上游项目
+   请在 EFB 配置文件中指定不同的实例 ID。
+-  **EWS 稳定吗？**
+   EWS 依赖于上游项目
    `ItChat <https://github.com/littlecodersh/ItChat>`__
-   以及微信网页版的协议。根据 `ItChat
+   以及微信网页版的协议。根据 `ItChat
    FAQ <https://itchat.readthedocs.io/zh/latest/FAQ/>`__
    的说明，在满足以下情况的条件下，微信登录能够保持数个月稳定登录:
 
@@ -180,7 +187,7 @@ EWS 支持使用可选的配置文件来启用实验功能。配置文件存储�
 
    使用 `iTerm2
    图像协议 <https://www.iterm2.com/documentation-images.html>`__
-   显示二维码。本功能只适用于 iTerm2 用户。
+   显示二维码。本功能只适用于 iTerm2 用户。
 
 -  ``delete_on_edit`` *(bool)* [默认值: ``false``]
 
@@ -197,15 +204,15 @@ EWS 支持使用可选的配置文件来启用实验功能。配置文件存储�
 
 -  ``puid_logs`` *(str)* [默认值：``null``]
 
-   输出 PUID 相关日志到指定日志路径。请使用绝对路径。PUID 日志可能会根据\
+   输出 PUID 相关日志到指定日志路径。请使用绝对路径。PUID 日志可能会根据\
    会话数量和消息吞吐量而占用大量存储空间。
 
 - ``send_stickers_and_gif_as_jpeg`` *(bool)* [默认值: ``false``]
 
   以 JPEG 图片方式发送自定义表情和 GIF，用于临时绕过微信网页版的自定义表情限制。\
-  详见 `#48`_\ 。
+  详见 `#48`_\ 。
 
-.. _#48: https://github.com/blueset/efb-wechat-slave/issues/48
+.. _#48: https://ews.1a23.studio/issues/48
 
 - ``system_chats_to_include`` *(list of str)* [默认值: ``[filehelper]``]
 
@@ -218,71 +225,73 @@ EWS 支持使用可选的配置文件来启用实验功能。配置文件存储�
   指定登陆网页版微信时所使用的「用户代理」（user agent）字符串。\
   不指定则使用 itchat 提供的默认值。
 
+- ``text_post_processing`` *(bool)* [默认值: ``true``]
+
+  调整是否在从微信收到消息后对消息文本进行后处理步骤。
+
 ``vendor_specific``
 -------------------
 
-EWS 的 ``EFBChat`` 提供了以下的 ``vendor_specific`` 项目：
+EWS 的 \ ``Chat``\  提供了以下的 \ ``vendor_specific``\  项目：
 
 -  ``is_mp`` *(bool)*
    该会话是否为公众号。
 - ``is_contact`` *(bool)*
-  不明。提取自 API。
+  不明。提取自 API。
 - ``is_blacklist_contact`` *(bool)*
   该用户是否被加入黑名单。
 - ``is_conversation_contact`` *(bool)*
-  不明。提取自 API。
+  不明。提取自 API。
 - ``is_room_contact_del`` *(bool)*
-  不明。提取自 API。
+  不明。提取自 API。
 - ``is_room_owner`` *(bool)*
   该用户是否为群组创建者。
 - ``is_brand_contact`` *(bool)*
-  不明。提取自 API。
+  不明。提取自 API。
 - ``is_sp_contact`` *(bool)*
-  不明。提取自 API。
+  不明。提取自 API。
 - ``is_shield_user`` *(bool)*
-  不明。提取自 API。
+  不明。提取自 API。
 - ``is_muted`` *(bool)*
   该会话是否在微信中开启免打扰。
 - ``is_top`` *(bool)*
   该会话是否在微信中被置顶。
 - ``has_photo_album`` *(bool)*
-  不明。提取自 API。
+  不明。提取自 API。
 
 开源许可
 --------
 
-EWS 使用了 `GNU Affero General Public License 3.0`_ 或更新版本作为其开源许可::
+EWS 使用了 \ `GNU Affero 通用公共许可协议 3.0`_\ （GNU Affero General Public
+License 3.0）或更新版本作为其开源许可::
 
-    EFB WeChat Slave Channel: An master channel for EH Forwarder Bot.
-    Copyright (C) 2016 - 2019 Eana Hufwe, and the EFB WeChat Slave Channel contributors
-    All rights reserved.
+    EFB 微信从端：一个适用于 EH Forwarder Bot 的从端
+    Copyright (C) 2016 - 2020 Eana Hufwe 和 EFB 微信从端贡献者
+    保留所有权利。
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or any later version.
+    此程序是一个自由软件；您可以在遵守由自由软件基金会发布的第三版或更新
+    版本的 GNU Affero 通用公共许可协议的情况下重新分发并和/或修改软件。
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    我们本着可为人所用的意愿分发此软件，但并不提供任何保证；甚至没有商业
+    性的或对特定目的适用性的暗指。更多细节请参看 GNU Affero 通用公共许可
+    协议。
 
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    您应该已经随收到一份 GNU Affero 通用公共许可协议；如果没有，请查阅
+    <http://www.gnu.org/licenses/>。
 
-.. _GNU Affero General Public License 3.0: https://www.gnu.org/licenses/agpl-3.0.txt
+.. _GNU Affero 通用公共许可协议 3.0: https://www.gnu.org/licenses/agpl-3.0.txt
 
 翻译界面
 --------
 
-EWS 启用了社区支持的本地化翻译。您可以将语言环境变量 (``LANGUAGE``,
+EWS 启用了社区支持的本地化翻译。您可以将语言环境变量 (``LANGUAGE``,
 ``LC_ALL``, ``LC_MESSAGES`` 或 ``LANG``) 设为一种\ `已支持的语言`_\ 。
-同时，您也可以在我们的 `Crowdin 项目`_\ 里面将 EWS 翻译为您的语言。
+同时，您也可以在我们的 `Crowdin 项目`_\ 里面将 EWS 翻译为您的语言。
 
 .. _已支持的语言: https://crowdin.com/project/ehforwarderbot/
-.. _Crowdin 项目: https://crowdin.com/project/ehforwarderbot/
+.. _Crowdin 项目: https://crowdin.com/project/ehforwarderbot/
 
 .. note::
 
-    如果您是从源码安装的 EWS，您需要在安装前事先编译翻译文本目录（\ ``.mo``\ ），\
+    如果您是从源码安装的 EWS，您需要在安装前事先编译翻译文本目录（\ ``.mo``\ ），\
     才可启用界面翻译。
